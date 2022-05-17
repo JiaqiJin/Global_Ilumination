@@ -119,7 +119,7 @@
       <AdditionalIncludeDirectories>../ThirdParty/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>../ThirdParty/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>assimp-vc142-mtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -136,7 +136,7 @@
       <AdditionalIncludeDirectories>../ThirdParty/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -145,14 +145,24 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Common\Application.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="pch.cpp" />
+    <ClCompile Include="Utilities\GameTimer.cpp" />
     <ClCompile Include="Utilities\imgui_impl_dx12.cpp" />
     <ClCompile Include="Utilities\imgui_impl_win32.cpp" />
+    <ClCompile Include="Utilities\Utils.cpp" />
+    <ClCompile Include="WindowApplication.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Common\Application.h" />
     <ClInclude Include="Common\d3dx12.h" />
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="Utilities\GameTimer.h" />
     <ClInclude Include="Utilities\imgui_impl_dx12.h" />
     <ClInclude Include="Utilities\imgui_impl_win32.h" />
+    <ClInclude Include="Utilities\Utils.h" />
+    <ClInclude Include="WindowApplication.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
