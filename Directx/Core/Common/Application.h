@@ -14,6 +14,8 @@
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "dxguid.lib")
 
+class DescriptorHeap;
+
 class Application
 {
 public:
@@ -36,11 +38,13 @@ public:
 	virtual bool Initialize();
 	virtual LRESULT MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
+
 protected:
-	//virtual void CreateRtvAndDsvDescriptorHeaps();
-	//virtual void OnResize();
-	virtual void Update(const GameTimer& timer) = 0;
-	virtual void Draw(const GameTimer& timer) = 0;
+
+	virtual void CreateRtvAndDsvDescriptorHeaps();
+	virtual void OnResize();
+	virtual void Update(const GameTimer& t) = 0;
+	virtual void Draw(const GameTimer& t) = 0;
 	virtual void OnDestroy() = 0;
 
 	// Convenience overrides for handling mouse input.
@@ -52,9 +56,29 @@ protected:
 	virtual void OnKeyUp(WPARAM btnState) {}
 
 protected:
+
 	// D3D inits
 	bool InitMainWindow();
+	bool InitDirect3D();
+	void CreateCommandObjects();
+	void CreateSwapChain();
+
+	void FlushCommandQueue();
+
+	ID3D12Resource* CurrentBackBuffer()const;
+	D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView()const;
+	// gives reference to first dsv in dsvHeap, which is the dsv for swapchain
+	D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView()const;
+
+	void CalculateFrameStats();
+
+	void LogAdapters();
+	void LogAdapterOutputs(IDXGIAdapter* adapter);
+	void LogOutputDisplayModes(IDXGIOutput* output, DXGI_FORMAT format);
+
 protected:
+
+	// core parameters
 	static Application* mApplication;
 
 	HINSTANCE mhAppInst = nullptr; // application instance handle
@@ -65,11 +89,37 @@ protected:
 	bool      mResizing = false;   // are the resize bars being dragged?
 	bool      mFullscreenState = false;// fullscreen enabled
 
-	// Set true to use 4X MSAA (?.1.8).  The default is false.
+		// Set true to use 4X MSAA (?.1.8).  The default is false.
 	bool      m4xMsaaState = false;    // 4X MSAA enabled
 	UINT      m4xMsaaQuality = 0;      // quality level of 4X MSAA
 
 	GameTimer mTimer;
+
+	Microsoft::WRL::ComPtr<IDXGIFactory4> mdxgiFactory;
+	Microsoft::WRL::ComPtr<IDXGISwapChain> mSwapChain;
+	Microsoft::WRL::ComPtr<ID3D12Device> md3dDevice;
+
+	Microsoft::WRL::ComPtr<ID3D12Fence> mFence;
+	UINT64 mCurrentFence = 0;
+
+	Microsoft::WRL::ComPtr<ID3D12CommandQueue> mCommandQueue;
+	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> mDirectCmdListAlloc;
+	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList5> mCommandList;
+
+	static const int SwapChainBufferCount = 2;
+	int mCurrBackBuffer = 0;
+	Microsoft::WRL::ComPtr<ID3D12Resource> mSwapChainBuffer[SwapChainBufferCount];
+	Microsoft::WRL::ComPtr<ID3D12Resource> mDepthStencilBuffer;
+
+	std::unique_ptr<DescriptorHeap> mRtvHeap;
+	std::unique_ptr<DescriptorHeap> mDsvHeap;
+
+	D3D12_VIEWPORT mScreenViewport;
+	D3D12_RECT mScissorRect;
+
+	UINT mRtvDescriptorSize = 0;
+	UINT mDsvDescriptorSize = 0;
+	UINT mCbvSrvUavDescriptorSize = 0;
 
 	// Derived class parameters
 	std::wstring mMainWndCaption = L"Render";

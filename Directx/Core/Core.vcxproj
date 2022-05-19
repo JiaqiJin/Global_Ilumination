@@ -146,6 +146,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Common\Application.cpp" />
+    <ClCompile Include="DX12\CommandContext.cpp" />
+    <ClCompile Include="DX12\RootSignature.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="Utilities\GameTimer.cpp" />
@@ -157,6 +159,9 @@
   <ItemGroup>
     <ClInclude Include="Common\Application.h" />
     <ClInclude Include="Common\d3dx12.h" />
+    <ClInclude Include="DX12\CommandContext.h" />
+    <ClInclude Include="DX12\DescriptorHeap.h" />
+    <ClInclude Include="DX12\RootSignature.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Utilities\GameTimer.h" />
     <ClInclude Include="Utilities\imgui_impl_dx12.h" />
