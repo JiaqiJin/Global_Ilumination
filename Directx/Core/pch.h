@@ -22,3 +22,4 @@
 #include "Common/d3dx12.h"
 #include "Utilities/GameTimer.h"
 #include "Utilities/Utils.h"
+#include "Utilities/MathUtils.h"

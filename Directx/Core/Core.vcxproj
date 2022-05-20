@@ -115,7 +115,7 @@
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>true</ConformanceMode>
+      <ConformanceMode>false</ConformanceMode>
       <AdditionalIncludeDirectories>../ThirdParty/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -124,6 +124,12 @@
       <AdditionalLibraryDirectories>../ThirdParty/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>assimp-vc142-mtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <FxCompile>
+      <ShaderType>Effect</ShaderType>
+    </FxCompile>
+    <FxCompile>
+      <ShaderModel>5.0</ShaderModel>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -132,7 +138,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>true</ConformanceMode>
+      <ConformanceMode>false</ConformanceMode>
       <AdditionalIncludeDirectories>../ThirdParty/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -143,9 +149,17 @@
       <AdditionalLibraryDirectories>../ThirdParty/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>assimp-vc142-mtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <FxCompile>
+      <ShaderType>Effect</ShaderType>
+    </FxCompile>
+    <FxCompile>
+      <ShaderModel>5.0</ShaderModel>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Common\Application.cpp" />
+    <ClCompile Include="Common\FrameResource.cpp" />
+    <ClCompile Include="Common\Geometry.cpp" />
     <ClCompile Include="DX12\CommandContext.cpp" />
     <ClCompile Include="DX12\RootSignature.cpp" />
     <ClCompile Include="Main.cpp" />
@@ -153,12 +167,15 @@
     <ClCompile Include="Utilities\GameTimer.cpp" />
     <ClCompile Include="Utilities\imgui_impl_dx12.cpp" />
     <ClCompile Include="Utilities\imgui_impl_win32.cpp" />
+    <ClCompile Include="Utilities\MathUtils.cpp" />
     <ClCompile Include="Utilities\Utils.cpp" />
     <ClCompile Include="WindowApplication.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Common\Application.h" />
     <ClInclude Include="Common\d3dx12.h" />
+    <ClInclude Include="Common\FrameResource.h" />
+    <ClInclude Include="Common\Geometry.h" />
     <ClInclude Include="DX12\CommandContext.h" />
     <ClInclude Include="DX12\DescriptorHeap.h" />
     <ClInclude Include="DX12\RootSignature.h" />
@@ -166,8 +183,12 @@
     <ClInclude Include="Utilities\GameTimer.h" />
     <ClInclude Include="Utilities\imgui_impl_dx12.h" />
     <ClInclude Include="Utilities\imgui_impl_win32.h" />
+    <ClInclude Include="Utilities\MathUtils.h" />
     <ClInclude Include="Utilities\Utils.h" />
     <ClInclude Include="WindowApplication.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Shaders\color.hlsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

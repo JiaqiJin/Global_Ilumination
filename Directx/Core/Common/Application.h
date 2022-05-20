@@ -38,7 +38,6 @@ public:
 	virtual bool Initialize();
 	virtual LRESULT MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-
 protected:
 
 	virtual void CreateRtvAndDsvDescriptorHeaps();

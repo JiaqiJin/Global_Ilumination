@@ -27,8 +27,7 @@ Application* Application::GetApplication()
 	return mApplication;
 }
 
-Application::Application(HINSTANCE hInstance) 
-	: mhAppInst(hInstance) 
+Application::Application(HINSTANCE hInstance) : mhAppInst(hInstance) 
 {
 	assert(mApplication == nullptr);
 	mApplication = this;
@@ -36,8 +35,12 @@ Application::Application(HINSTANCE hInstance)
 
 Application::~Application() 
 {
-	
+	if (md3dDevice != nullptr) 
+	{
+		FlushCommandQueue();
+	}
 }
+
 
 HINSTANCE Application::AppInst()const
 {
@@ -61,7 +64,14 @@ bool Application::Get4xMsaaState()const
 
 void Application::Set4xMsaaState(bool value)
 {
-	
+	if (m4xMsaaState != value)
+	{
+		m4xMsaaState = value;
+
+		// Recreate the swapchain and buffers with new multisample settings.
+		CreateSwapChain();
+		OnResize();
+	}
 }
 
 int Application::Run()
@@ -85,7 +95,7 @@ int Application::Run()
 
 			if (!mAppPaused)
 			{
-				
+				CalculateFrameStats();
 				Update(mTimer);
 				Draw(mTimer);
 			}
@@ -96,7 +106,8 @@ int Application::Run()
 		}
 	}
 
-	
+	// flush command queue before relseasing resources
+	FlushCommandQueue();
 	OnDestroy();
 
 	return (int)msg.wParam;
@@ -107,17 +118,127 @@ bool Application::Initialize()
 	if (!InitMainWindow())
 		return false;
 
+	if (!InitDirect3D())
+		return false;
+
+	// Do the initial resize code.
+	OnResize();
+
 	return true;
 }
 
 void Application::CreateRtvAndDsvDescriptorHeaps()
 {
 
+	mRtvHeap = std::make_unique<DescriptorHeap>();
+	mRtvHeap->Create(md3dDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
+		(UINT)(SwapChainBufferCount),
+		false);
+
+	mDsvHeap = std::make_unique<DescriptorHeap>();
+	mDsvHeap->Create(md3dDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV,
+		(UINT)(1),
+		false);
+
 }
 
 void Application::OnResize()
 {
+	assert(md3dDevice);
+	assert(mSwapChain);
+	assert(mDirectCmdListAlloc);
 
+	// Flush before changing any resources.
+	FlushCommandQueue();
+
+	ThrowIfFailed(mCommandList->Reset(mDirectCmdListAlloc.Get(), nullptr));
+
+	// Release the previous resources we will be recreating.
+	for (int i = 0; i < SwapChainBufferCount; ++i)
+		mSwapChainBuffer[i].Reset();
+	mDepthStencilBuffer.Reset();
+
+	// Resize the swap chain.
+	ThrowIfFailed(mSwapChain->ResizeBuffers(
+		SwapChainBufferCount,
+		mClientWidth, mClientHeight,
+		mBackBufferFormat,
+		DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH));
+
+	mCurrBackBuffer = 0;
+
+	// re/create RTV views
+
+	for (UINT i = 0; i < SwapChainBufferCount; i++)
+	{
+		ThrowIfFailed(mSwapChain->GetBuffer(i, IID_PPV_ARGS(&mSwapChainBuffer[i])));
+		md3dDevice->CreateRenderTargetView(mSwapChainBuffer[i].Get(), nullptr, mRtvHeap->mCPUHandle(i));
+		if (!mInitialized) {
+			mRtvHeap->incrementCurrentOffset();
+		}
+	}
+
+	// Create the depth/stencil buffer and view.
+	D3D12_RESOURCE_DESC depthStencilDesc;
+	depthStencilDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	depthStencilDesc.Alignment = 0;
+	depthStencilDesc.Width = mClientWidth;
+	depthStencilDesc.Height = mClientHeight;
+	depthStencilDesc.DepthOrArraySize = 1;
+	depthStencilDesc.MipLevels = 1;
+	depthStencilDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
+
+	depthStencilDesc.SampleDesc.Count = m4xMsaaState ? 4 : 1;
+	depthStencilDesc.SampleDesc.Quality = m4xMsaaState ? (m4xMsaaQuality - 1) : 0;
+	depthStencilDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	depthStencilDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+	D3D12_CLEAR_VALUE optClear;
+	optClear.Format = mDepthStencilFormat;
+	optClear.DepthStencil.Depth = 1.0f;
+	optClear.DepthStencil.Stencil = 0;
+	ThrowIfFailed(md3dDevice->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&depthStencilDesc,
+		D3D12_RESOURCE_STATE_COMMON,
+		&optClear,
+		IID_PPV_ARGS(mDepthStencilBuffer.GetAddressOf())));
+
+	// Create descriptor to mip level 0 of entire resource using the format of the resource.
+	D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc;
+	dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
+	dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+	dsvDesc.Format = mDepthStencilFormat;
+	dsvDesc.Texture2D.MipSlice = 0;
+	md3dDevice->CreateDepthStencilView(mDepthStencilBuffer.Get(), &dsvDesc, DepthStencilView());
+	if (!mInitialized) {
+		mDsvHeap->incrementCurrentOffset();
+	}
+
+	// Transition the resource from its initial state to be used as a depth buffer.
+	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mDepthStencilBuffer.Get(),
+		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE));
+
+	// Execute the resize commands.
+	ThrowIfFailed(mCommandList->Close());
+	ID3D12CommandList* cmdsLists[] = { mCommandList.Get() };
+	mCommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
+
+	// Wait until resize is complete on GPU side.
+	FlushCommandQueue();
+
+	// Update the viewport transform to cover the client area.
+	mScreenViewport.TopLeftX = 0;
+	mScreenViewport.TopLeftY = 0;
+	mScreenViewport.Width = static_cast<float>(mClientWidth);
+	mScreenViewport.Height = static_cast<float>(mClientHeight);
+	mScreenViewport.MinDepth = 0.0f;
+	mScreenViewport.MaxDepth = 1.0f;
+
+	mScissorRect = { 0, 0, mClientWidth, mClientHeight };
+
+	mInitialized = true;
 }
 
 LRESULT Application::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -145,7 +266,56 @@ LRESULT Application::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		// Save the new client area dimensions.
 		mClientWidth = LOWORD(lParam);
 		mClientHeight = HIWORD(lParam);
-		
+		if (md3dDevice)
+		{
+			if (wParam == SIZE_MINIMIZED)
+			{
+				mAppPaused = true;
+				mMinimized = true;
+				mMaximized = false;
+			}
+			else if (wParam == SIZE_MAXIMIZED)
+			{
+				mAppPaused = false;
+				mMinimized = false;
+				mMaximized = true;
+				OnResize();
+			}
+			else if (wParam == SIZE_RESTORED)
+			{
+
+				// Restoring from minimized state?
+				if (mMinimized)
+				{
+					mAppPaused = false;
+					mMinimized = false;
+					OnResize();
+				}
+
+				// Restoring from maximized state?
+				else if (mMaximized)
+				{
+					mAppPaused = false;
+					mMaximized = false;
+					OnResize();
+				}
+				else if (mResizing)
+				{
+					// If user is dragging the resize bars, we do not resize 
+					// the buffers here because as the user continuously 
+					// drags the resize bars, a stream of WM_SIZE messages are
+					// sent to the window, and it would be pointless (and slow)
+					// to resize for each WM_SIZE message received from dragging
+					// the resize bars.  So instead, we reset after the user is 
+					// done resizing the window and releases the resize bars, which 
+					// sends a WM_EXITSIZEMOVE message.
+				}
+				else // API call such as SetWindowPos or mSwapChain->SetFullscreenState.
+				{
+					OnResize();
+				}
+			}
+		}
 		return 0;
 
 		// WM_ENTERSIZEMOVE is sent when the user grabs the resize bars.
@@ -161,6 +331,7 @@ LRESULT Application::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		mAppPaused = false;
 		mResizing = false;
 		mTimer.Start();
+		OnResize();
 		return 0;
 
 		// WM_DESTROY is sent when the window is being destroyed.
@@ -368,6 +539,7 @@ void Application::CreateSwapChain()
 		mSwapChain.GetAddressOf()));
 }
 
+// make CPU wait on GPU
 void Application::FlushCommandQueue()
 {
 	// Advance the fence value to mark commands up to this fence point.
@@ -397,14 +569,17 @@ ID3D12Resource* Application::CurrentBackBuffer()const
 	return mSwapChainBuffer[mCurrBackBuffer].Get();
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE Application::CurrentBackBufferView() const
+D3D12_CPU_DESCRIPTOR_HANDLE Application::CurrentBackBufferView()const
 {
-	// TODO
+	return CD3DX12_CPU_DESCRIPTOR_HANDLE(
+		mRtvHeap->mCPUHandle(0),
+		mCurrBackBuffer,
+		mRtvDescriptorSize);
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE Application::DepthStencilView() const
+D3D12_CPU_DESCRIPTOR_HANDLE Application::DepthStencilView()const
 {
-	// TODO
+	return mDsvHeap->mCPUHandle(0);
 }
 
 void Application::CalculateFrameStats()
