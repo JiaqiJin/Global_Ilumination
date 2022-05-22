@@ -164,6 +164,7 @@
     <ClCompile Include="DX12\RootSignature.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="pch.cpp" />
+    <ClCompile Include="Renderer\DeferredRenderer.cpp" />
     <ClCompile Include="Utilities\GameTimer.cpp" />
     <ClCompile Include="Utilities\imgui_impl_dx12.cpp" />
     <ClCompile Include="Utilities\imgui_impl_win32.cpp" />
@@ -180,6 +181,7 @@
     <ClInclude Include="DX12\DescriptorHeap.h" />
     <ClInclude Include="DX12\RootSignature.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="Renderer\DeferredRenderer.h" />
     <ClInclude Include="Utilities\GameTimer.h" />
     <ClInclude Include="Utilities\imgui_impl_dx12.h" />
     <ClInclude Include="Utilities\imgui_impl_win32.h" />
