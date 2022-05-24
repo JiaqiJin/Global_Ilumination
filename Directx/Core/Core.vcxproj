@@ -160,6 +160,8 @@
     <ClCompile Include="Common\Application.cpp" />
     <ClCompile Include="Common\FrameResource.cpp" />
     <ClCompile Include="Common\Geometry.cpp" />
+    <ClCompile Include="Common\Model.cpp" />
+    <ClCompile Include="Common\Scene.cpp" />
     <ClCompile Include="DX12\CommandContext.cpp" />
     <ClCompile Include="DX12\RootSignature.cpp" />
     <ClCompile Include="Main.cpp" />
@@ -177,6 +179,8 @@
     <ClInclude Include="Common\d3dx12.h" />
     <ClInclude Include="Common\FrameResource.h" />
     <ClInclude Include="Common\Geometry.h" />
+    <ClInclude Include="Common\Model.h" />
+    <ClInclude Include="Common\Scene.h" />
     <ClInclude Include="DX12\CommandContext.h" />
     <ClInclude Include="DX12\DescriptorHeap.h" />
     <ClInclude Include="DX12\RootSignature.h" />

@@ -7,17 +7,6 @@ using Microsoft::WRL::ComPtr;
 using namespace DirectX;
 using namespace DirectX::PackedVector;
 
-struct Vertex
-{
-	XMFLOAT3 Pos;
-	XMFLOAT4 Color;
-};
-
-struct ObjectConstants
-{
-	XMFLOAT4X4 WorldViewProj = MathUtils::Identity4x4();
-};
-
 class WindowApplication : public Application
 {
 public:
@@ -30,28 +19,44 @@ private:
 	virtual void Update(const GameTimer& gt) override;
 	virtual void Draw(const GameTimer& gt) override;
 	virtual void OnDestroy() override;
+    virtual void OnResize() override;
+
+    // input callbacks 
+    virtual void OnMouseDown(WPARAM btnState, int x, int y)override;
+    virtual void OnMouseUp(WPARAM btnState, int x, int y)override;
+    virtual void OnMouseMove(WPARAM btnState, int x, int y)override;
+    // key board input
+    virtual void OnKeyDown(WPARAM btnState)override;
+    virtual void OnKeyUp(WPARAM btnState)override;
+    void OnKeyboardInput(const GameTimer& gt);
+
     void BuildDescriptorHeaps();
-    void BuildConstantBuffers();
     void BuildRootSignature();
     void BuildShadersAndInputLayout();
-    void BuildBoxGeometry();
     void BuildPSO();
+    void CreatePSO(ID3D12PipelineState** pso,
+        ID3D12RootSignature* rootSignature,
+        D3D12_PRIMITIVE_TOPOLOGY_TYPE primitiveTopoType,
+        D3D12_BLEND_DESC blendDesc,
+        D3D12_RASTERIZER_DESC rasterDesc,
+        D3D12_DEPTH_STENCIL_DESC dsState,
+        UINT numRenderTargets,
+        DXGI_FORMAT renderTargetFormat,
+        DXGI_FORMAT depthStencilFormat,
+        ID3DBlob* vertexShader,
+        ID3DBlob* pixelShader,
+        ID3DBlob* geometryShader = nullptr);
 
+    std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> GetStaticSamplers();
 private:
 
-    ComPtr<ID3D12RootSignature> mRootSignature = nullptr;
-    ComPtr<ID3D12DescriptorHeap> mCbvHeap = nullptr;
+    std::unique_ptr<class DeferredRenderer> mDeferredRenderer;
 
-    std::unique_ptr<UploadBuffer<ObjectConstants>> mObjectCB = nullptr;
-
-    std::unique_ptr<MeshGeometry> mBoxGeo = nullptr;
-
-    ComPtr<ID3DBlob> mvsByteCode = nullptr;
-    ComPtr<ID3DBlob> mpsByteCode = nullptr;
+    std::unordered_map<std::string, ComPtr<ID3DBlob>> mShaders;
+    std::unordered_map<std::string, ComPtr<ID3D12PipelineState>> mPSOs;
+    std::unordered_map<std::string, ComPtr<ID3D12RootSignature>> mRootSignatures;
 
     std::vector<D3D12_INPUT_ELEMENT_DESC> mInputLayout;
-
-    ComPtr<ID3D12PipelineState> mPSO = nullptr;
 
     XMFLOAT4X4 mWorld = MathUtils::Identity4x4();
     XMFLOAT4X4 mView = MathUtils::Identity4x4();
@@ -62,4 +67,9 @@ private:
     float mRadius = 5.0f;
 
     POINT mLastMousePos;
+    bool isFreeCamEnabled = true;
+
+    UINT NumRTVs;
+    UINT NumDSVs;
+    UINT NumSRVs;
 };
