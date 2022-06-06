@@ -117,6 +117,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>false</ConformanceMode>
       <AdditionalIncludeDirectories>../ThirdParty/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -164,6 +165,7 @@
     <ClCompile Include="Common\Material.cpp" />
     <ClCompile Include="Common\Model.cpp" />
     <ClCompile Include="Common\Scene.cpp" />
+    <ClCompile Include="Common\Texture.cpp" />
     <ClCompile Include="DX12\CommandContext.cpp" />
     <ClCompile Include="DX12\RootSignature.cpp" />
     <ClCompile Include="Main.cpp" />
@@ -185,6 +187,7 @@
     <ClInclude Include="Common\Material.h" />
     <ClInclude Include="Common\Model.h" />
     <ClInclude Include="Common\Scene.h" />
+    <ClInclude Include="Common\Texture.h" />
     <ClInclude Include="DX12\CommandContext.h" />
     <ClInclude Include="DX12\DescriptorHeap.h" />
     <ClInclude Include="DX12\RootSignature.h" />

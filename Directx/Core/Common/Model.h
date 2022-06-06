@@ -7,6 +7,8 @@
 #include "Material.h"
 #include "Geometry.h"
 
+class CommandContext;
+
 enum ModelType
 {
 	DEFAULT_MODEL = 0, 
@@ -33,15 +35,17 @@ class Model
 {
 public:
 	Model();
-	Model(ModelType type);
+	Model(ModelType type, std::string matName);
 
 	Model(const Model& rhs) = delete;
 	Model& operator=(const Model& rhs) = delete;
 
-	void InitModel(ID3D12Device* device);
+	void InitModel(ID3D12Device* device, CommandContext* cmdObj);
 
 	void CreateBuffer(ID3D12Device* device);
-	void CreateUploadBuffer(ID3D12Device* device);
+	void CreateUploadBuffer(ID3D12Device* device, CommandContext* cmdObj);
+
+	void appendAssimpMesh(const aiScene* aiscene, aiMesh* aimesh);
 
 	D3D12_VERTEX_BUFFER_VIEW getVertexBufferView() const;
 	D3D12_INDEX_BUFFER_VIEW getIndexBufferView() const;
@@ -67,6 +71,10 @@ protected:
 	void buildCylinderGeometry();
 
 protected:
+
+	UINT globalMeshID;
+	std::string MatName;
+
 	std::vector<Vertex> vertices;
 	std::vector<std::uint32_t> indices; // specifically for large meshes whoes index size > 65535
 
