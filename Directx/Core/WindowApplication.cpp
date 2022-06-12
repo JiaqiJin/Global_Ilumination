@@ -2,6 +2,7 @@
 #include "WindowApplication.h"
 #include <DirectXColors.h>
 #include "Renderer/DeferredRenderer.h"
+#include "DX12/DescriptorHeap.h"
 
 WindowApplication::WindowApplication(HINSTANCE hInstance)
 	: Application(hInstance)
@@ -126,6 +127,21 @@ void WindowApplication::OnDestroy()
 
 }
 
+void WindowApplication::UpdateObjectCBs(const GameTimer& gt)
+{
+
+}
+
+void WindowApplication::UpdateMainPassCB(const GameTimer& gt)
+{
+
+}
+
+void WindowApplication::UpdateCBs(const GameTimer& gt)
+{
+
+}
+
 void WindowApplication::BuildDescriptorHeaps()
 {
 	
@@ -193,6 +209,29 @@ void WindowApplication::CreatePSO(ID3D12PipelineState** pso,
 	PsoDesc.SampleDesc.Quality = m4xMsaaState ? (m4xMsaaQuality - 1) : 0;
 	PsoDesc.DSVFormat = depthStencilFormat;
 	ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&PsoDesc, IID_PPV_ARGS(pso)));
+}
+
+void WindowApplication::BuildFrameResources()
+{
+	for (int i = 0; i < d3dUtil::gNumFrameResources; ++i)
+	{
+		mFrameResources.push_back(std::make_unique<FrameResource>(md3dDevice.Get(),
+			2,                                          // two main pass cbvs : default main pass & shadowmap main pass
+			(UINT)mScene->getObjectInfos().size(),      // this many objects cbvs
+			(UINT)mScene->getMaterialMap().size(),       // this many material cbvs
+			1                                           // this many radiance cbvs
+			));
+	}
+}
+
+void WindowApplication::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vector<ObjectInfo*>& objInfos)
+{
+
+}
+
+void WindowApplication::DrawScene()
+{
+
 }
 
 std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> WindowApplication::GetStaticSamplers()

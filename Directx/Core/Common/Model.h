@@ -40,20 +40,33 @@ public:
 	Model(const Model& rhs) = delete;
 	Model& operator=(const Model& rhs) = delete;
 
-	void InitModel(ID3D12Device* device, CommandContext* cmdObj);
 
 	void CreateBuffer(ID3D12Device* device);
 	void CreateUploadBuffer(ID3D12Device* device, CommandContext* cmdObj);
+
+	void InitModel(ID3D12Device* device, CommandContext* cmdObj);
 
 	void appendAssimpMesh(const aiScene* aiscene, aiMesh* aimesh);
 
 	D3D12_VERTEX_BUFFER_VIEW getVertexBufferView() const;
 	D3D12_INDEX_BUFFER_VIEW getIndexBufferView() const;
 	std::unordered_map<std::string, Mesh>& getDrawArgs();
+	const d3dUtil::Bound& getBounds() const;
+
+	void setWorldMatrix(const DirectX::XMFLOAT4X4& mat);
+	DirectX::XMFLOAT4X4& getWorldMatrix();
+	float getObj2VoxelScale();
+	void setObj2VoxelScale(float _scale);
+
+
 public:
 	std::string Name;
 
+	std::string mMatName;
+
 	ModelType modelType = ModelType::DEFAULT_MODEL;
+
+	bool IsDynamic;
 
 	// A MeshGeometry may store multiple geometries in one vertex/index buffer.
 	// Use this container to define the Submesh geometries so we can draw

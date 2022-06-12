@@ -73,8 +73,8 @@ public:
 	void resize(const int& width, const int& height);
 
 	std::unordered_map<std::string, std::unique_ptr<Material>>& getMaterialMap();
-	std::unordered_map<std::string, std::unique_ptr<Model>>& getModelsMap();
 	std::unordered_map<std::string, std::unique_ptr<Texture>>& getTexturesMap();
+	std::unordered_map<std::string, std::unique_ptr<Model>>& getModelsMap();
 	std::unordered_map<std::string, std::unique_ptr<Camera>>& getCamerasMap();
 	std::unordered_map<std::string, std::unique_ptr<ObjectInfo>>& getObjectInfos();
 	const std::vector<std::vector<ObjectInfo*>>& getObjectInfoLayer();
@@ -104,4 +104,7 @@ private:
 
 	UINT globalTextureSRVDescriptorHeapIndex = 0;
 	UINT globalMatCBindex = 0;
+
+	std::shared_ptr<CommandContext> cpyCommandObject;
+	ID3D12Device* md3dDevice;
 };
