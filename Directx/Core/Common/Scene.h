@@ -104,7 +104,4 @@ private:
 
 	UINT globalTextureSRVDescriptorHeapIndex = 0;
 	UINT globalMatCBindex = 0;
-
-	std::shared_ptr<CommandContext> cpyCommandObject;
-	ID3D12Device* md3dDevice;
 };

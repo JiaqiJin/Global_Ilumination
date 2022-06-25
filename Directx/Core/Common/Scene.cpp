@@ -142,7 +142,11 @@ void Scene::buildMaterials()
 
 void Scene::loadTextures() 
 {
-   
+    auto texture_1 = std::make_unique<Texture>("Path", globalTextureSRVDescriptorHeapIndex++);
+    texture_1->Name = "tex1";
+    texture_1->initializeTextureBuffer(md3dDevice, cpyCommandContext.get());
+
+    mTextures[texture_1->Name] = std::move(texture_1);
 }
 
 void Scene::buildCameras() {
@@ -191,7 +195,7 @@ void Scene::loadAssetFromAssimp(const std::string filepath)
     processNode(aiscene->mRootNode, aiscene, assimpModel.get());
 
     assimpModel->Name = filepath.substr(filepath.find_last_of('/') + 1);
-    assimpModel->InitModel(md3dDevice, cpyCommandObject.get());
+    assimpModel->InitModel(md3dDevice, cpyCommandContext.get());
     mModels[assimpModel->Name] = std::move(assimpModel); 
 }
 
