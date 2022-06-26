@@ -37,8 +37,10 @@ private:
     void OnKeyboardInput(const GameTimer& gt);
 
     // Update
+    void UpdateCamera(const GameTimer& gt);
     void UpdateObjectCBs(const GameTimer& gt);
     void UpdateMainPassCB(const GameTimer& gt);
+    void UpdateMaterialCBs(const GameTimer& gt);
     void UpdateCBs(const GameTimer& gt);
 
     void BuildDescriptorHeaps();
@@ -73,6 +75,8 @@ private:
 
     std::unique_ptr<Scene> mScene;
     std::unique_ptr<class DeferredRenderer> mDeferredRenderer;
+    std::unique_ptr<class ShadowMap> mShadowMap;
+    std::unique_ptr<class MeshVoxelizer> mMeshVoxelizer;
 
     std::unordered_map<std::string, ComPtr<ID3DBlob>> mShaders;
     std::unordered_map<std::string, ComPtr<ID3D12PipelineState>> mPSOs;
@@ -85,9 +89,13 @@ private:
     XMFLOAT4X4 mView = MathUtils::Identity4x4();
     XMFLOAT4X4 mProj = MathUtils::Identity4x4();
 
+    //common camera
+    XMFLOAT3 mEyePos = { 0.0f, 0.0f, 0.0f };
+    XMFLOAT4X4 mView = MathUtils::Identity4x4();
+    XMFLOAT4X4 mProj = MathUtils::Identity4x4();
     float mTheta = 1.5f * XM_PI;
-    float mPhi = XM_PIDIV4;
-    float mRadius = 5.0f;
+    float mPhi = 0.2f * XM_PI;
+    float mRadius = 85.0f;
 
     POINT mLastMousePos;
     bool isFreeCamEnabled = true;

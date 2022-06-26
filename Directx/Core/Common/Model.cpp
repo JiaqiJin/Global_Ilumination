@@ -187,12 +187,15 @@ void Model::buildGeometry()
     vertices.resize(totalVertCount);
 
     UINT k = 0;
-    for (size_t i = 0; i < box.Vertices.size(); ++i, ++k) {
+    for (size_t i = 0; i < box.Vertices.size(); ++i, ++k) 
+    {
         vertices[k].Pos = box.Vertices[i].Position;
         vertices[k].Normal = box.Vertices[i].Normal;
         vertices[k].TexC = box.Vertices[i].TexC;
     }
-    for (size_t i = 0; i < sphere.Vertices.size(); ++i, ++k) {
+
+    for (size_t i = 0; i < sphere.Vertices.size(); ++i, ++k) 
+    {
         vertices[k].Pos = sphere.Vertices[i].Position;
         vertices[k].Normal = sphere.Vertices[i].Normal;
         vertices[k].TexC = sphere.Vertices[i].TexC;
@@ -231,7 +234,8 @@ void Model::buildQuadGeometry()
     vertices.resize(totalVertCount);
 
     UINT k = 0;
-    for (size_t i = 0; i < quad.Vertices.size(); ++i, ++k) {
+    for (size_t i = 0; i < quad.Vertices.size(); ++i, ++k) 
+    {
         vertices[k].Pos = quad.Vertices[i].Position;
         vertices[k].Normal = quad.Vertices[i].Normal;
         vertices[k].TexC = quad.Vertices[i].TexC;
@@ -270,7 +274,8 @@ void Model::buildSphereGeometry() {
     vertices.resize(totalVertCount);
 
     UINT k = 0;
-    for (size_t i = 0; i < sphere.Vertices.size(); ++i, ++k) {
+    for (size_t i = 0; i < sphere.Vertices.size(); ++i, ++k)
+    {
         vertices[k].Pos = sphere.Vertices[i].Position;
         vertices[k].Normal = sphere.Vertices[i].Normal;
         vertices[k].TexC = sphere.Vertices[i].TexC;
@@ -322,7 +327,8 @@ void Model::buildSphereGeometry()
     vertices.resize(totalVertCount);
 
     UINT k = 0;
-    for (size_t i = 0; i < sphere.Vertices.size(); ++i, ++k) {
+    for (size_t i = 0; i < sphere.Vertices.size(); ++i, ++k) 
+    {
         vertices[k].Pos = sphere.Vertices[i].Position;
         vertices[k].Normal = sphere.Vertices[i].Normal;
         vertices[k].TexC = sphere.Vertices[i].TexC;
@@ -362,7 +368,8 @@ void Model::buildCubeGeometry()
     vertices.resize(totalVertCount);
 
     UINT k = 0;
-    for (size_t i = 0; i < sphere.Vertices.size(); ++i, ++k) {
+    for (size_t i = 0; i < sphere.Vertices.size(); ++i, ++k)
+    {
         vertices[k].Pos = sphere.Vertices[i].Position;
         vertices[k].Normal = sphere.Vertices[i].Normal;
         vertices[k].TexC = sphere.Vertices[i].TexC;
@@ -403,7 +410,8 @@ void Model::buildGridGeometry()
     vertices.resize(totalVertCount);
 
     UINT k = 0;
-    for (size_t i = 0; i < sphere.Vertices.size(); ++i, ++k) {
+    for (size_t i = 0; i < sphere.Vertices.size(); ++i, ++k)
+    {
         vertices[k].Pos = sphere.Vertices[i].Position;
         vertices[k].Normal = sphere.Vertices[i].Normal;
         vertices[k].TexC = sphere.Vertices[i].TexC;
@@ -444,7 +452,8 @@ void Model::buildCylinderGeometry()
     vertices.resize(totalVertCount);
 
     UINT k = 0;
-    for (size_t i = 0; i < sphere.Vertices.size(); ++i, ++k) {
+    for (size_t i = 0; i < sphere.Vertices.size(); ++i, ++k) 
+    {
         vertices[k].Pos = sphere.Vertices[i].Position;
         vertices[k].Normal = sphere.Vertices[i].Normal;
         vertices[k].TexC = sphere.Vertices[i].TexC;
@@ -474,22 +483,26 @@ void Model::appendAssimpMesh(const aiScene* aiscene, aiMesh* aimesh)
     UINT curIndexOffset = indices.size();
     UINT curIndexCount = 0;
 
-    for (unsigned int i = 0; i < aimesh->mNumVertices; ++i) {
-
+    for (unsigned int i = 0; i < aimesh->mNumVertices; ++i) 
+    {
         Vertex curVertex;
         curVertex.Pos = DirectX::XMFLOAT3(aimesh->mVertices[i].x, aimesh->mVertices[i].y, aimesh->mVertices[i].z);
         mBounds.updateBounds(curVertex.Pos);
         curVertex.Normal = DirectX::XMFLOAT3(aimesh->mNormals[i].x, aimesh->mNormals[i].y, aimesh->mNormals[i].z);
-        if (aimesh->mTextureCoords[0]) {
+
+        if (aimesh->mTextureCoords[0]) 
+        {
             curVertex.TexC = DirectX::XMFLOAT2(aimesh->mTextureCoords[0][i].x, aimesh->mTextureCoords[0][i].y);
         }
         vertices.push_back(curVertex);
     }
 
-    for (unsigned int i = 0; i < aimesh->mNumFaces; ++i) {
+    for (unsigned int i = 0; i < aimesh->mNumFaces; ++i) 
+    {
         aiFace& aiface = aimesh->mFaces[i];
 
-        for (unsigned int j = 0; j < aiface.mNumIndices; ++j) {
+        for (unsigned int j = 0; j < aiface.mNumIndices; ++j) 
+        {
             indices.push_back(aiface.mIndices[j]);
             curIndexCount++;
         }

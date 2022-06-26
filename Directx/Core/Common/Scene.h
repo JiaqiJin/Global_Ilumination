@@ -35,7 +35,6 @@ struct MeshInfo
 
 struct ObjectInfo 
 {
-
 	ObjectInfo() = default;
 
 	DirectX::XMFLOAT4X4 World = MathUtils::Identity4x4();

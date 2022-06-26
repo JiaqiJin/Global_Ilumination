@@ -2,12 +2,15 @@
 #include "WindowApplication.h"
 #include <DirectXColors.h>
 #include "Renderer/DeferredRenderer.h"
+#include "Renderer/MeshVoxelizer.h"
+#include "Renderer/ShadowMap.h"
 #include "DX12/DescriptorHeap.h"
 
 WindowApplication::WindowApplication(HINSTANCE hInstance)
 	: Application(hInstance)
 {
-
+	NumRTVs = SwapChainBufferCount + static_cast<UINT>(GBUFFER_TYPE::COUNT); // back buffer + gbuffers
+	NumDSVs = 1; // DSV for swapchain
 }
 
 WindowApplication::~WindowApplication()
@@ -127,12 +130,33 @@ void WindowApplication::OnDestroy()
 
 }
 
+void WindowApplication::UpdateCamera(const GameTimer& gt)
+{
+	// Convert Spherical to Cartesian coordinates.
+	mEyePos.x = mRadius * sinf(mPhi) * cosf(mTheta);
+	mEyePos.z = mRadius * sinf(mPhi) * sinf(mTheta);
+	mEyePos.y = mRadius * cosf(mPhi);
+
+	// Build the view matrix.
+	XMVECTOR pos = DirectX::XMVectorSet(mEyePos.x, mEyePos.y, mEyePos.z, 1.0f);
+	XMVECTOR target = DirectX::XMVectorZero();
+	XMVECTOR up = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+
+	XMMATRIX view = DirectX::XMMatrixLookAtLH(pos, target, up);
+	DirectX::XMStoreFloat4x4(&mView, view);
+}
+
 void WindowApplication::UpdateObjectCBs(const GameTimer& gt)
 {
 
 }
 
 void WindowApplication::UpdateMainPassCB(const GameTimer& gt)
+{
+
+}
+
+void WindowApplication::UpdateMaterialCBs(const GameTimer& gt)
 {
 
 }
@@ -144,12 +168,29 @@ void WindowApplication::UpdateCBs(const GameTimer& gt)
 
 void WindowApplication::BuildDescriptorHeaps()
 {
-	
+	NumSRVs = mScene->getTexturesMap().size() + 1 + static_cast<UINT>(GBUFFER_TYPE::COUNT);
+
+	auto mMainPassSrvHeap = std::make_unique<DescriptorHeap>();
+	mMainPassSrvHeap->Create(md3dDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, (UINT)(NumSRVs), true);
+	mSrvHeaps["MainPass"] = std::move(mMainPassSrvHeap);
+
+	UINT offset = 0;
+	for (auto& tex : mScene->getTexturesMap()) 
+	{
+		auto texture = tex.second->textureBuffer;
+		auto textureDesc = tex.second->GetSRVDesc();
+		md3dDevice->CreateShaderResourceView(texture.Get(), &textureDesc, mSrvHeaps["MainPass"]->mCPUHandle(tex.second->textureID));
+		mSrvHeaps["MainPass"]->incrementCurrentOffset();
+	}
 }
 
 void WindowApplication::BuildRootSignature()
 {
-	
+	CD3DX12_DESCRIPTOR_RANGE Range4MainPass[5];
+	Range4MainPass[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0); // t0 for diffuse texutre for current material
+	Range4MainPass[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1); // t1 for shadowmap texture
+	Range4MainPass[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (int)GBUFFER_TYPE::COUNT, 2); //t2, t3 ,t4, t5 for textures in gbuffer
+
 }
 
 void WindowApplication::BuildShadersAndInputLayout()

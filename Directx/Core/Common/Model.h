@@ -40,7 +40,6 @@ public:
 	Model(const Model& rhs) = delete;
 	Model& operator=(const Model& rhs) = delete;
 
-
 	void CreateBuffer(ID3D12Device* device);
 	void CreateUploadBuffer(ID3D12Device* device, CommandContext* cmdObj);
 
@@ -57,7 +56,6 @@ public:
 	DirectX::XMFLOAT4X4& getWorldMatrix();
 	float getObj2VoxelScale();
 	void setObj2VoxelScale(float _scale);
-
 
 public:
 	std::string Name;

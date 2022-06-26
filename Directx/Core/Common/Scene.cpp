@@ -175,10 +175,15 @@ void Scene::loadAssetFromAssimp(const std::string filepath)
     assimpModel->setWorldMatrix(worldMat);
     assimpModel->setObj2VoxelScale(200.0f);
 
-    Assimp::Importer importer;
-    // importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_LINE | aiPrimitiveType_POINT);
-    const aiScene* aiscene = importer.ReadFile(filepath,
+    //==============================================
+    // assimp init
+    //===========================================
 
+    Assimp::Importer importer;
+
+    // importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_LINE | aiPrimitiveType_POINT);
+
+    const aiScene* aiscene = importer.ReadFile(filepath,
         aiProcess_Triangulate
         | aiProcess_GenNormals
         | aiProcess_FlipUVs
@@ -187,16 +192,99 @@ void Scene::loadAssetFromAssimp(const std::string filepath)
         | aiProcess_PreTransformVertices
     );
 
-    if (!aiscene || aiscene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !aiscene->mRootNode) {
+    if (!aiscene || aiscene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !aiscene->mRootNode) 
+    {
 
         MessageBox(NULL, (L"ERROR::ASSIMP::" + AnsiToWString(importer.GetErrorString())).c_str(), L"Error!", MB_OK);
         return;
     }
+
+    //=============================================
+    // mesh appending (CPU)
+    //===========================================
+
     processNode(aiscene->mRootNode, aiscene, assimpModel.get());
 
     assimpModel->Name = filepath.substr(filepath.find_last_of('/') + 1);
     assimpModel->InitModel(md3dDevice, cpyCommandContext.get());
-    mModels[assimpModel->Name] = std::move(assimpModel); 
+    mModels[assimpModel->Name] = std::move(assimpModel);
+
+    //=============================================
+    // material construct
+    //===========================================
+
+    const std::string directory = filepath.substr(0, filepath.find_last_of('/')) + '/';    // get the directory path
+    for (unsigned int i = 0; i < aiscene->mNumMaterials; ++i) 
+    {
+        aiMaterial* curMaterial = aiscene->mMaterials[i];
+        UINT srvDiffID = 0;
+        UINT srvNormID = 0;
+        for (unsigned int j = 0; j < curMaterial->GetTextureCount(aiTextureType_DIFFUSE); ++j)
+        {
+            //===========================================
+            // diffuse texture load
+            //===========================================
+            aiString str;
+            curMaterial->GetTexture(aiTextureType_DIFFUSE, j, &str);
+            std::string completeTexturePath = directory + str.C_Str();
+            auto curtex = std::make_unique<Texture>(AnsiToWString(completeTexturePath), globalTextureSRVDescriptorHeapIndex);
+            curtex->Name = completeTexturePath.substr(completeTexturePath.find_last_of('\\') + 1);
+            srvDiffID = curtex->textureID;
+            if (mTextures.find(curtex->Name) == mTextures.end()) 
+            {
+                if (!curtex->initializeTextureBuffer(md3dDevice, cpyCommandContext.get()))
+                {
+                    srvDiffID = 0; // use default (srvID = 0) if no texture presented
+                    continue;
+                }
+                globalTextureSRVDescriptorHeapIndex++;
+                mTextures[curtex->Name] = std::move(curtex);
+            }
+            else 
+            {
+                srvDiffID = mTextures[curtex->Name]->textureID;
+            }
+
+        }
+        for (unsigned int j = 0; j < curMaterial->GetTextureCount(aiTextureType_NORMALS); ++j) 
+        {
+            //===========================================
+            // normal texture load
+            //===========================================
+            aiString str;
+            curMaterial->GetTexture(aiTextureType_NORMALS, j, &str);
+            std::string completeTexturePath = directory + str.C_Str();
+            auto curtex = std::make_unique<Texture>(AnsiToWString(completeTexturePath), globalTextureSRVDescriptorHeapIndex);
+            curtex->Name = completeTexturePath.substr(completeTexturePath.find_last_of('\\') + 1);
+            srvNormID = curtex->textureID;
+            if (mTextures.find(curtex->Name) == mTextures.end()) 
+            {
+                if (!curtex->initializeTextureBuffer(md3dDevice, cpyCommandContext.get())) 
+                {
+                    srvDiffID = 0; // use default (srvID = 0) if no texture presented
+                    continue;
+                }
+                globalTextureSRVDescriptorHeapIndex++;
+                mTextures[curtex->Name] = std::move(curtex);
+            }
+            else {
+                srvNormID = mTextures[curtex->Name]->textureID;
+            }
+        }
+        //=============================================
+        // continue material construct
+        //===========================================
+
+        auto curmat = std::make_unique<Material>();
+        curmat->Name = curMaterial->GetName().C_Str();
+        curmat->MatCBIndex = globalMatCBindex++; // 2 because 2 default test
+        curmat->DiffuseAlbedo = DirectX::XMFLOAT4(0.2f, 0.6f, 0.6f, 1.0f);
+        curmat->FresnelR0 = DirectX::XMFLOAT3(0.01f, 0.01f, 0.01f);
+        curmat->Roughness = 1.0f;
+        curmat->DiffuseSrvHeapIndex = srvDiffID; // use default (srvID = 0) if no texture presented
+        curmat->NormalSrvHeapIndex = srvNormID;
+        mMaterials[curmat->Name] = std::move(curmat);
+    }
 }
 
 void Scene::processNode(aiNode* ainode, const aiScene* aiscene, Model* assimpModel) {

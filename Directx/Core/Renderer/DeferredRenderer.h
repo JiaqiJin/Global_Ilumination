@@ -1,5 +1,14 @@
 #pragma once
 
+enum class GBUFFER_TYPE : int
+{ 
+	POSITION = 0,
+	ALBEDO, 
+	NORMAL,
+	DEPTH, 
+	COUNT 
+};
+
 class GBuffer
 {
 public:
