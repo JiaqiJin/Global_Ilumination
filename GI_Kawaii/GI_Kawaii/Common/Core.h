@@ -6,6 +6,7 @@
 #endif
 
 #include "Timer.h"
+#include "../pch.h"
 
 #pragma comment(lib,"d3dcompiler.lib")
 #pragma comment(lib, "D3D12.lib")
@@ -65,8 +66,8 @@ protected:
 	void FlushCommandQueue();
 
 	ID3D12Resource* CurrentBackBuffer()const;
-	//D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView()const;
-	//D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView()const;
+	D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView()const;
+	D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView()const;
 
 	void CalculateFrameStats();
 
@@ -108,6 +109,10 @@ protected:
 	int mCurrBackBuffer = 0;
 	Microsoft::WRL::ComPtr<ID3D12Resource> mSwapChainBuffer[SwapChainBufferCount];
 	Microsoft::WRL::ComPtr<ID3D12Resource> mDepthStencilBuffer;
+
+	// Descriptor Heap
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mRtvHeap;
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mDsvHeap;
 
 	D3D12_VIEWPORT mScreenViewport;
 	D3D12_RECT mScissorRect;

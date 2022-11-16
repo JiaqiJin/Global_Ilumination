@@ -120,11 +120,15 @@
       <AdditionalIncludeDirectories>E:\VisualStudio\Global_Ilumination\dependencies\assimp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>E:\VisualStudio\Global_Ilumination\dependencies\assimp\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>assimp-vc140-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <FxCompile>
+      <ShaderModel>5.0</ShaderModel>
+      <ShaderType>Effect</ShaderType>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -145,9 +149,10 @@
   <ItemGroup>
     <ClCompile Include="Application.cpp" />
     <ClCompile Include="Common\Core.cpp" />
-    <ClCompile Include="Common\Utils.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="pch.cpp" />
+    <ClCompile Include="Utility\MathUtils.cpp" />
+    <ClCompile Include="Utility\Utils.cpp" />
     <ClCompile Include="Vendor\imgui\imgui_impl_dx12.cpp" />
     <ClCompile Include="Vendor\imgui\imgui_impl_win32.cpp" />
     <ClCompile Include="Vendor\imgui\imgui.cpp" />
@@ -159,8 +164,9 @@
     <ClInclude Include="Common\Core.h" />
     <ClInclude Include="Common\d3dx12.h" />
     <ClInclude Include="Common\Timer.h" />
-    <ClInclude Include="Common\Utils.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="Utility\MathUtils.h" />
+    <ClInclude Include="Utility\Utils.h" />
     <ClInclude Include="Vendor\imgui\imgui_impl_dx12.h" />
     <ClInclude Include="Vendor\imgui\imgui_impl_win32.h" />
     <ClInclude Include="Vendor\imgui\imconfig.h" />
@@ -169,6 +175,9 @@
     <ClInclude Include="Vendor\imgui\imstb_rectpack.h" />
     <ClInclude Include="Vendor\imgui\imstb_textedit.h" />
     <ClInclude Include="Vendor\imgui\imstb_truetype.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Shaders\Color.hlsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -39,6 +39,7 @@
 #include <DirectXMath.h>
 #include <DirectXPackedVector.h>
 #include <DirectXCollision.h>
+#include <DirectXColors.h>
 
 #include <algorithm>
 #include <atomic>
@@ -97,5 +98,5 @@
 #include <xapofx.h>
 
 // 
-#include "Common/Utils.h"
+#include "Utility/Utils.h"
 #include "Common/d3dx12.h"

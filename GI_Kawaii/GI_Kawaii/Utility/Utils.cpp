@@ -1,6 +1,5 @@
 #include "../pch.h"
 #include "Utils.h"
-
 #include <comdef.h>
 #include <fstream>
 
