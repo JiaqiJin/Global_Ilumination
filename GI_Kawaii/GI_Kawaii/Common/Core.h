@@ -13,9 +13,11 @@
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "dxguid.lib")
 
+// Forward declaration
+class DX12_DescriptorHeap;
+
 class Core
 {
-
 public:
 	// get singleton
 	static Core* GetCore();
@@ -111,8 +113,8 @@ protected:
 	Microsoft::WRL::ComPtr<ID3D12Resource> mDepthStencilBuffer;
 
 	// Descriptor Heap
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mRtvHeap;
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mDsvHeap;
+	std::unique_ptr<DX12_DescriptorHeap> mRtvHeap;
+	std::unique_ptr<DX12_DescriptorHeap> mDsvHeap;
 
 	D3D12_VIEWPORT mScreenViewport;
 	D3D12_RECT mScissorRect;

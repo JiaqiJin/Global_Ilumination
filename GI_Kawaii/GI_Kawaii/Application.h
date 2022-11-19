@@ -27,22 +27,22 @@ public:
     Application& operator=(const Application& rhs) = delete;
     ~Application();
 
-    virtual bool Initialize()override;
+    virtual bool Initialize() override;
 
 private:
-    virtual void CreateRtvAndDsvDescriptorHeaps();
-    virtual void OnResize()override;
-    virtual void Update(const Timer& gt)override;
-    virtual void Draw(const Timer& gt)override;
-    virtual void OnDestroy()override;
+    virtual void CreateRtvAndDsvDescriptorHeaps() override;
+    virtual void OnResize() override;
+    virtual void Update(const Timer& gt) override;
+    virtual void Draw(const Timer& gt) override;
+    virtual void OnDestroy() override;
 
     // input callbacks 
-    virtual void OnMouseDown(WPARAM btnState, int x, int y)override;
-    virtual void OnMouseUp(WPARAM btnState, int x, int y)override;
-    virtual void OnMouseMove(WPARAM btnState, int x, int y)override;
+    virtual void OnMouseDown(WPARAM btnState, int x, int y) override;
+    virtual void OnMouseUp(WPARAM btnState, int x, int y) override;
+    virtual void OnMouseMove(WPARAM btnState, int x, int y) override;
     // key board input
-    virtual void OnKeyDown(WPARAM btnState)override;
-    virtual void OnKeyUp(WPARAM btnState)override;
+    virtual void OnKeyDown(WPARAM btnState) override;
+    virtual void OnKeyUp(WPARAM btnState) override;
 
     // per frame updates
     void OnKeyboardInput(const Timer& gt);
