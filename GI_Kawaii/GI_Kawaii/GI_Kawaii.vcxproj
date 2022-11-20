@@ -149,6 +149,9 @@
   <ItemGroup>
     <ClCompile Include="Application.cpp" />
     <ClCompile Include="Common\Core.cpp" />
+    <ClCompile Include="Common\D3D12MemAlloc.cpp" />
+    <ClCompile Include="Common\Geometry.cpp" />
+    <ClCompile Include="Common\Model.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="RHI\DX12\DX12_DescriptorHeap.cpp" />
@@ -163,7 +166,10 @@
   <ItemGroup>
     <ClInclude Include="Application.h" />
     <ClInclude Include="Common\Core.h" />
+    <ClInclude Include="Common\D3D12MemAlloc.h" />
     <ClInclude Include="Common\d3dx12.h" />
+    <ClInclude Include="Common\Geometry.h" />
+    <ClInclude Include="Common\Model.h" />
     <ClInclude Include="Common\Timer.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="RHI\DX12\DX12_DescriptorHeap.h" />
