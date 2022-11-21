@@ -202,13 +202,13 @@ private:
 // and data needed to draw a subset of geometry stores in the vertex and index 
 // buffers so that we can implement the technique described by Figure 6.3.
 
-//
-//struct Vertex
-//{
-//    DirectX::XMFLOAT3 Pos;
-//    DirectX::XMFLOAT3 Normal;
-//    DirectX::XMFLOAT2 TexC;
-//};
+
+struct Vertex
+{
+    DirectX::XMFLOAT3 Pos;
+    DirectX::XMFLOAT3 Normal;
+    DirectX::XMFLOAT2 TexC;
+};
 
 // Defines a subrange of geometry in a MeshGeometry.  This is for when multiple
 // geometries are stored in one vertex and index buffer.  It provides the offsets
