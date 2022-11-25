@@ -25,7 +25,7 @@ bool Application::Initialize()
 
 	BuildRootSignature();
 	BuildShadersAndInputLayout();
-	BuildBoxGeometry();
+	BuildSceneGeometry();
 	BuildRenderItems();
 	BuildFrameResources();
 	BuildDescriptorHeaps();
@@ -270,7 +270,7 @@ void Application::UpdateMainPassCB(const Timer& gt)
 	mMainPassCB.RenderTargetSize = XMFLOAT2((float)mClientWidth, (float)mClientHeight);
 	mMainPassCB.InvRenderTargetSize = XMFLOAT2(1.0f / mClientWidth, 1.0f / mClientHeight);
 	mMainPassCB.NearZ = 1.0f;
-	mMainPassCB.FarZ = 10000.0f;
+	mMainPassCB.FarZ = 1000.0f;
 	mMainPassCB.TotalTime = gt.TotalTime();
 	mMainPassCB.DeltaTime = gt.DeltaTime();
 
@@ -477,77 +477,9 @@ void Application::BuildConstantBuffers()
 	}
 }
 
-void Application::BuildBoxGeometry()
+void Application::BuildSceneGeometry()
 {
-	//std::array<Vertex, 8> vertices =
-	//{
-	//	/*Vertex({ XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT4(Colors::White) }),
-	//	Vertex({ XMFLOAT3(-1.0f, +1.0f, -1.0f), XMFLOAT4(Colors::Black) }),
-	//	Vertex({ XMFLOAT3(+1.0f, +1.0f, -1.0f), XMFLOAT4(Colors::Red) }),
-	//	Vertex({ XMFLOAT3(+1.0f, -1.0f, -1.0f), XMFLOAT4(Colors::Green) }),
-	//	Vertex({ XMFLOAT3(-1.0f, -1.0f, +1.0f), XMFLOAT4(Colors::Blue) }),
-	//	Vertex({ XMFLOAT3(-1.0f, +1.0f, +1.0f), XMFLOAT4(Colors::Yellow) }),
-	//	Vertex({ XMFLOAT3(+1.0f, +1.0f, +1.0f), XMFLOAT4(Colors::Cyan) }),
-	//	Vertex({ XMFLOAT3(+1.0f, -1.0f, +1.0f), XMFLOAT4(Colors::Magenta) })*/
-	//};
-
-	//std::array<std::uint16_t, 36> indices =
-	//{
-	//	// front face
-	//	0, 1, 2,
-	//	0, 2, 3,
-
-	//	// back face
-	//	4, 6, 5,
-	//	4, 7, 6,
-
-	//	// left face
-	//	4, 5, 1,
-	//	4, 1, 0,
-
-	//	// right face
-	//	3, 2, 6,
-	//	3, 6, 7,
-
-	//	// top face
-	//	1, 5, 6,
-	//	1, 6, 2,
-
-	//	// bottom face
-	//	4, 0, 3,
-	//	4, 3, 7
-	//};
-
-	//const UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
-	//const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
-
-	//mBoxGeo = std::make_unique<MeshGeometry>();
-	//mBoxGeo->Name = "boxGeo";
-
-	//ThrowIfFailed(D3DCreateBlob(vbByteSize, &mBoxGeo->VertexBufferCPU));
-	//CopyMemory(mBoxGeo->VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
-
-	//ThrowIfFailed(D3DCreateBlob(ibByteSize, &mBoxGeo->IndexBufferCPU));
-	//CopyMemory(mBoxGeo->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
-
-	//mBoxGeo->VertexBufferGPU = d3dUtil::CreateDefaultBuffer(md3dDevice.Get(),
-	//	mCommandList.Get(), vertices.data(), vbByteSize, mBoxGeo->VertexBufferUploader);
-
-	//mBoxGeo->IndexBufferGPU = d3dUtil::CreateDefaultBuffer(md3dDevice.Get(),
-	//	mCommandList.Get(), indices.data(), ibByteSize, mBoxGeo->IndexBufferUploader);
-
-	//mBoxGeo->VertexByteStride = sizeof(Vertex);
-	//mBoxGeo->VertexBufferByteSize = vbByteSize;
-	//mBoxGeo->IndexFormat = DXGI_FORMAT_R16_UINT;
-	//mBoxGeo->IndexBufferByteSize = ibByteSize;
-
-	//SubmeshGeometry submesh;
-	//submesh.IndexCount = (UINT)indices.size();
-	//submesh.StartIndexLocation = 0;
-	//submesh.BaseVertexLocation = 0;
-
-	//mBoxGeo->DrawArgs["box"] = submesh;
-
+	// Build a Box Model Geometry Data
 	TestBoxModel = new Model(ModelType::CUBE_MODEL);
 	TestBoxModel->InitModel(md3dDevice.Get(), mCommandList.Get());
 }

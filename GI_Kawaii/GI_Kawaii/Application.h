@@ -98,7 +98,7 @@ private:
     );
 
     void BuildConstantBuffers();
-    void BuildBoxGeometry();
+    void BuildSceneGeometry();
 
     void BuildFrameResources();
     void BuildConstantBufferViews();
