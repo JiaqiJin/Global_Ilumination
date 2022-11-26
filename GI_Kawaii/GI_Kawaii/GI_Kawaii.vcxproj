@@ -117,13 +117,13 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>false</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>E:\VisualStudio\Global_Ilumination\dependencies\assimp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>E:\VisualStudio\Global_Ilumination\dependencies\assimp\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>assimp-vc140-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <FxCompile>
       <ShaderModel>5.0</ShaderModel>
@@ -153,6 +153,7 @@
     <ClCompile Include="Common\FrameResource.cpp" />
     <ClCompile Include="Common\Geometry.cpp" />
     <ClCompile Include="Common\Model.cpp" />
+    <ClCompile Include="Common\Scene.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="RHI\DX12\DX12_DescriptorHeap.cpp" />
@@ -172,6 +173,7 @@
     <ClInclude Include="Common\FrameResource.h" />
     <ClInclude Include="Common\Geometry.h" />
     <ClInclude Include="Common\Model.h" />
+    <ClInclude Include="Common\Scene.h" />
     <ClInclude Include="Common\Timer.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="RHI\DX12\DX12_DescriptorHeap.h" />

@@ -20,6 +20,8 @@ bool Application::Initialize()
 		return false;
 	}
 
+	// Load Assimp Meshes
+
 	// Reset the command list to prep for initialization commands.
 	ThrowIfFailed(mCommandList->Reset(mDirectCmdListAlloc.Get(), nullptr));
 
@@ -482,6 +484,8 @@ void Application::BuildSceneGeometry()
 	// Build a Box Model Geometry Data
 	TestBoxModel = new Model(ModelType::CUBE_MODEL);
 	TestBoxModel->InitModel(md3dDevice.Get(), mCommandList.Get());
+
+	LoadAssetFromAssimp("Assets/Models/ww2/source/ww2.obj");
 }
 
 void Application::BuildFrameResources()
@@ -591,4 +595,60 @@ std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> Application::GetStaticSamplers(
 		pointWrap, pointClamp,
 		linearWrap, linearClamp,
 		anisotropicWrap, anisotropicClamp };
+}
+
+void Application::LoadAssetFromAssimp(const std::string filepath)
+{
+	AssimpMode = new Model(ModelType::ASSIMP_MODEL);
+
+	DirectX::XMFLOAT4X4 worldMat = MathUtils::Identity4x4();// the sponza model is stupidly big, I'm not happy bout dat
+	DirectX::XMStoreFloat4x4(&worldMat, DirectX::XMMatrixScaling(0.1f, 0.1f, 0.1f) * DirectX::XMMatrixTranslation(0.0f, 0.0f, 0.0f));
+	AssimpMode->SetWorldMatrix(worldMat);
+
+	//==============================================
+   // assimp init
+   //===========================================
+
+	Assimp::Importer importer;
+	// importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_LINE | aiPrimitiveType_POINT);
+	const aiScene* aiscene = importer.ReadFile(filepath,
+
+		aiProcess_Triangulate
+		| aiProcess_FlipUVs
+		| aiProcess_CalcTangentSpace
+	);
+
+	if (!aiscene || aiscene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !aiscene->mRootNode) {
+
+		MessageBox(NULL, (L"ERROR::ASSIMP::" + AnsiToWString(importer.GetErrorString())).c_str(), L"Error!", MB_OK);
+		return;
+	}
+
+	//=============================================
+	// mesh appending (CPU)
+	//===========================================
+
+	processNode(aiscene->mRootNode, aiscene, AssimpMode);
+
+	AssimpMode->Name = filepath.substr(filepath.find_last_of('/') + 1);
+	AssimpMode->InitModel(md3dDevice.Get(), mCommandList.Get());
+
+	// TODO Material
+}
+
+void Application::processNode(aiNode* ainode, const aiScene* aiscene, Model* assimpModel)
+{
+	for (unsigned int i = 0; i < ainode->mNumMeshes; ++i) 
+	{
+
+		aiMesh* aimesh = aiscene->mMeshes[ainode->mMeshes[i]];
+
+		assimpModel->AppendAssimpMesh(aiscene, aimesh);
+
+	}
+
+	for (unsigned int i = 0; i < ainode->mNumChildren; ++i)
+	{
+		processNode(ainode->mChildren[i], aiscene, assimpModel);
+	}
 }

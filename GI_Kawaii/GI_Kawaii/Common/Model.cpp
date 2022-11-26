@@ -131,6 +131,56 @@ std::unordered_map<std::string, SubMeshGeometry>& Model::getDrawArgs()
     return DrawArgs;
 }
 
+void Model::SetWorldMatrix(const DirectX::XMFLOAT4X4& mat)
+{
+    World = mat;
+}
+
+DirectX::XMFLOAT4X4& Model::GetWorldMatrix()
+{
+    return World;
+}
+
+void Model::AppendAssimpMesh(const aiScene* aiscene, aiMesh* aimesh)
+{
+    UINT curVertexOffset = vertices.size();
+    UINT curIndexOffset = indices.size();
+    UINT curIndexCount = 0;
+
+    for (unsigned int i = 0; i < aimesh->mNumVertices; i++)
+    {
+        Vertex curVertex;
+        curVertex.Pos = DirectX::XMFLOAT3(aimesh->mVertices[i].x, aimesh->mVertices[i].y, aimesh->mVertices[i].z);
+        curVertex.Normal = DirectX::XMFLOAT3(aimesh->mNormals[i].x, aimesh->mNormals[i].y, aimesh->mNormals[i].z);
+        if (aimesh->mTextureCoords[0]) 
+        {
+            curVertex.TexC = DirectX::XMFLOAT2(aimesh->mTextureCoords[0][i].x, aimesh->mTextureCoords[0][i].y);
+        }
+        vertices.push_back(curVertex);
+    }
+
+    for (unsigned int i = 0; i < aimesh->mNumFaces; i++)
+    {
+        aiFace& aiface = aimesh->mFaces[i];
+        for (unsigned int j = 0; j < aiface.mNumIndices; j++) 
+        {
+            indices.push_back(aiface.mIndices[j]);
+            curIndexCount++;
+        }
+    }
+
+    aiMaterial* aimaterial = aiscene->mMaterials[aimesh->mMaterialIndex];
+    auto matName = aimaterial->GetName();
+
+    SubMeshGeometry curSubMesh;
+    curSubMesh.IndexCount = (UINT)curIndexCount;
+    curSubMesh.StartIndexLocation = curIndexOffset;
+    curSubMesh.BaseVertexLocation = curVertexOffset;
+    curSubMesh.MaterialName = matName.C_Str();
+    std::string meshname = "Mesh"; // TODO Adding different Mesheses
+    DrawArgs[meshname] = curSubMesh;
+}
+
 void Model::buildGeometry()
 {
 
@@ -175,7 +225,18 @@ void Model::buildQuadGeometry()
 
 void Model::buildGeometryAssimp()
 {
+    const UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
+    const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint32_t);
 
+    ThrowIfFailed(D3DCreateBlob(vbByteSize, VertexBufferCPU.GetAddressOf()));
+    CopyMemory(VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
+    ThrowIfFailed(D3DCreateBlob(ibByteSize, IndexBufferCPU.GetAddressOf()));
+    CopyMemory(IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
+
+    VertexBufferByteSize = vbByteSize;
+    VertexByteStride = sizeof(Vertex);
+    IndexFormat = DXGI_FORMAT_R32_UINT;
+    IndexBufferByteSize = ibByteSize;
 }
 
 void Model::buildSphereGeometry()

@@ -2,9 +2,9 @@
 
 #include "Geometry.h"
 
-#include "assimp/Importer.hpp"
-#include "assimp/scene.h"
-#include "assimp/postprocess.h"
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
 
 enum ModelType
 { 
@@ -26,6 +26,8 @@ struct SubMeshGeometry
 	UINT StartIndexLocation = 0;
 	INT BaseVertexLocation = 0;
 
+	std::string MaterialName;
+
 	DirectX::BoundingBox Bounds;
 };
 
@@ -46,6 +48,11 @@ public:
 	D3D12_VERTEX_BUFFER_VIEW getVertexBufferView() const;
 	D3D12_INDEX_BUFFER_VIEW getIndexBufferView() const;
 	std::unordered_map<std::string, SubMeshGeometry>& getDrawArgs();
+
+	void SetWorldMatrix(const DirectX::XMFLOAT4X4& mat);
+	DirectX::XMFLOAT4X4& GetWorldMatrix();
+
+	void AppendAssimpMesh(const aiScene* aiscene, aiMesh* aimesh);
 
 protected:
 	void buildGeometry();

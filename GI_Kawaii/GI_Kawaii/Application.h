@@ -109,6 +109,9 @@ private:
 
     std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> GetStaticSamplers();
 
+    // Assimp
+    void LoadAssetFromAssimp(const std::string filepath);
+    void processNode(aiNode* ainode, const aiScene* aiscene, Model* assimpModel);
 private:
     // Frame Resource
     std::vector<std::unique_ptr<FrameResource>> mFrameResources;
@@ -142,6 +145,7 @@ private:
 
     // Mesh Creation
     Model* TestBoxModel;
+    Model* AssimpMode;
 
     // List of all the render items.
     std::vector<std::unique_ptr<RenderItem>> mAllRitems;
