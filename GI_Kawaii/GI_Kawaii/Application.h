@@ -5,6 +5,7 @@
 #include "Utility/Utils.h"
 #include "Common/Model.h"
 #include "Common/FrameResource.h"
+#include "Common/Scene.h"
 
 using Microsoft::WRL::ComPtr;
 using namespace DirectX;
@@ -155,4 +156,6 @@ private:
 
     PassConstants mMainPassCB;
     UINT mPassCbvOffset = 0;
+
+    std::unique_ptr<Scene> mScene;
 };

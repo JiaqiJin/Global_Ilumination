@@ -20,6 +20,8 @@ bool Application::Initialize()
 		return false;
 	}
 
+	mScene = std::make_unique<Scene>(md3dDevice.Get(), mClientWidth, mClientHeight);
+
 	// Load Assimp Meshes
 
 	// Reset the command list to prep for initialization commands.
