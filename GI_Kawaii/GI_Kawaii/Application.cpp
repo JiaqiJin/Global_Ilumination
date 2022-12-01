@@ -484,10 +484,11 @@ void Application::BuildConstantBuffers()
 void Application::BuildSceneGeometry()
 {
 	// Build a Box Model Geometry Data
-	TestBoxModel = new Model(ModelType::CUBE_MODEL);
-	TestBoxModel->InitModel(md3dDevice.Get(), mCommandList.Get());
+	/*TestBoxModel = new Model(ModelType::CUBE_MODEL);
+	TestBoxModel->InitModel(md3dDevice.Get(), mCommandList.Get());*/
 
-	LoadAssetFromAssimp("Assets/Models/ww2/source/ww2.obj");
+	//LoadAssetFromAssimp("Assets/Models/ww2/source/ww2.obj");
+	LoadAssetFromAssimp("Assets/Models/sponza/sponza.obj");
 }
 
 void Application::BuildFrameResources()
@@ -501,7 +502,7 @@ void Application::BuildFrameResources()
 
 void Application::BuildRenderItems()
 {
-	auto BoxRenderItem = std::make_unique<RenderItem>();
+	/*auto BoxRenderItem = std::make_unique<RenderItem>();
 	XMStoreFloat4x4(&BoxRenderItem->World, XMMatrixScaling(2.0f, 2.0f, 2.0f) * XMMatrixTranslation(0.0f, 0.5f, 0.0f));
 	BoxRenderItem->ObjCBIndex = 0;
 	BoxRenderItem->RenderModel = TestBoxModel;
@@ -509,7 +510,16 @@ void Application::BuildRenderItems()
 	BoxRenderItem->IndexCount = TestBoxModel->getDrawArgs()["cube"].IndexCount;
 	BoxRenderItem->StartIndexLocation = TestBoxModel->getDrawArgs()["cube"].StartIndexLocation;
 	BoxRenderItem->BaseVertexLocation = TestBoxModel->getDrawArgs()["cube"].BaseVertexLocation;
-	mAllRitems.push_back(std::move(BoxRenderItem));
+	mAllRitems.push_back(std::move(BoxRenderItem));*/
+
+	auto AssimpRenderItem = std::make_unique<RenderItem>();
+	AssimpRenderItem->ObjCBIndex = 0;
+	AssimpRenderItem->RenderModel = AssimpMode;
+	AssimpRenderItem->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	AssimpRenderItem->IndexCount = AssimpMode->getDrawArgs()["Mesh"].IndexCount;
+	AssimpRenderItem->StartIndexLocation = AssimpMode->getDrawArgs()["Mesh"].StartIndexLocation;
+	AssimpRenderItem->BaseVertexLocation = AssimpMode->getDrawArgs()["Mesh"].BaseVertexLocation;
+	mAllRitems.push_back(std::move(AssimpRenderItem));
 
 	// All the render items are opaque.
 	for (auto& e : mAllRitems)
