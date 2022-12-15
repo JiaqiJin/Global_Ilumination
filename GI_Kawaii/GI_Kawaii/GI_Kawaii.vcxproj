@@ -24,6 +24,7 @@
     <ProjectGuid>{f93136eb-fa31-465f-a829-2733258b2956}</ProjectGuid>
     <RootNamespace>GIKawaii</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>GI_Test</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -147,11 +148,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Application.cpp" />
+    <ClCompile Include="Shader_Applocation.cpp" />
     <ClCompile Include="Common\Core.cpp" />
     <ClCompile Include="Common\D3D12MemAlloc.cpp" />
     <ClCompile Include="Common\FrameResource.cpp" />
     <ClCompile Include="Common\Geometry.cpp" />
+    <ClCompile Include="Common\GeometryGenerator.cpp" />
     <ClCompile Include="Common\Model.cpp" />
     <ClCompile Include="Common\Scene.cpp" />
     <ClCompile Include="Main.cpp" />
@@ -159,11 +161,6 @@
     <ClCompile Include="RHI\DX12\DX12_DescriptorHeap.cpp" />
     <ClCompile Include="Utility\MathUtils.cpp" />
     <ClCompile Include="Utility\Utils.cpp" />
-    <ClCompile Include="Vendor\imgui\imgui_impl_dx12.cpp" />
-    <ClCompile Include="Vendor\imgui\imgui_impl_win32.cpp" />
-    <ClCompile Include="Vendor\imgui\imgui.cpp" />
-    <ClCompile Include="Vendor\imgui\imgui_tables.cpp" />
-    <ClCompile Include="Vendor\imgui\imgui_widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Application.h" />
@@ -172,6 +169,7 @@
     <ClInclude Include="Common\d3dx12.h" />
     <ClInclude Include="Common\FrameResource.h" />
     <ClInclude Include="Common\Geometry.h" />
+    <ClInclude Include="Common\GeometryGenerator.h" />
     <ClInclude Include="Common\Model.h" />
     <ClInclude Include="Common\Scene.h" />
     <ClInclude Include="Common\Timer.h" />
@@ -179,17 +177,10 @@
     <ClInclude Include="RHI\DX12\DX12_DescriptorHeap.h" />
     <ClInclude Include="Utility\MathUtils.h" />
     <ClInclude Include="Utility\Utils.h" />
-    <ClInclude Include="Vendor\imgui\imgui_impl_dx12.h" />
-    <ClInclude Include="Vendor\imgui\imgui_impl_win32.h" />
-    <ClInclude Include="Vendor\imgui\imconfig.h" />
-    <ClInclude Include="Vendor\imgui\imgui.h" />
-    <ClInclude Include="Vendor\imgui\imgui_internal.h" />
-    <ClInclude Include="Vendor\imgui\imstb_rectpack.h" />
-    <ClInclude Include="Vendor\imgui\imstb_textedit.h" />
-    <ClInclude Include="Vendor\imgui\imstb_truetype.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\Color.hlsl" />
+    <FxCompile Include="Shaders\LightingUtil.hlsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

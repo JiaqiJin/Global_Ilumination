@@ -48,6 +48,8 @@ public:
 	D3D12_VERTEX_BUFFER_VIEW getVertexBufferView() const;
 	D3D12_INDEX_BUFFER_VIEW getIndexBufferView() const;
 	std::unordered_map<std::string, SubMeshGeometry>& getDrawArgs();
+	std::vector<Vertex> getVertices();
+	std::vector<uint32_t> getIndices();
 
 	void SetWorldMatrix(const DirectX::XMFLOAT4X4& mat);
 	DirectX::XMFLOAT4X4& GetWorldMatrix();

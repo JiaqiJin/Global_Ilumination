@@ -141,6 +141,16 @@ DirectX::XMFLOAT4X4& Model::GetWorldMatrix()
     return World;
 }
 
+std::vector<Vertex> Model::getVertices()
+{
+    return vertices;
+}
+
+std::vector<uint32_t> Model::getIndices()
+{
+    return indices;
+}
+
 void Model::AppendAssimpMesh(const aiScene* aiscene, aiMesh* aimesh)
 {
     UINT curVertexOffset = vertices.size();
