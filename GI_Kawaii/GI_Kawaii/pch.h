@@ -100,3 +100,4 @@
 // 
 #include "Utility/Utils.h"
 #include "Common/d3dx12.h"
+#include "Common/DDSTextureLoader.h"

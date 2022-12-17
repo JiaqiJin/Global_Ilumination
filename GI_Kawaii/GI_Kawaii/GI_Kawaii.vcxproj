@@ -117,7 +117,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>false</ConformanceMode>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp14</LanguageStandard>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -127,7 +127,7 @@
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <FxCompile>
-      <ShaderModel>5.0</ShaderModel>
+      <ShaderModel>5.1</ShaderModel>
       <ShaderType>Effect</ShaderType>
     </FxCompile>
   </ItemDefinitionGroup>
@@ -148,7 +148,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Shader_Applocation.cpp" />
+    <ClCompile Include="Common\Camera.cpp" />
+    <ClCompile Include="Common\DDSTextureLoader.cpp" />
+    <ClCompile Include="Scene\ShadowMap.cpp" />
+    <ClCompile Include="Scene\ShadowMap_App.cpp" />
     <ClCompile Include="Common\Core.cpp" />
     <ClCompile Include="Common\D3D12MemAlloc.cpp" />
     <ClCompile Include="Common\FrameResource.cpp" />
@@ -164,9 +167,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Application.h" />
+    <ClInclude Include="Common\Camera.h" />
     <ClInclude Include="Common\Core.h" />
     <ClInclude Include="Common\D3D12MemAlloc.h" />
     <ClInclude Include="Common\d3dx12.h" />
+    <ClInclude Include="Common\DDSTextureLoader.h" />
     <ClInclude Include="Common\FrameResource.h" />
     <ClInclude Include="Common\Geometry.h" />
     <ClInclude Include="Common\GeometryGenerator.h" />
@@ -175,12 +180,9 @@
     <ClInclude Include="Common\Timer.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="RHI\DX12\DX12_DescriptorHeap.h" />
+    <ClInclude Include="Scene\ShadowMap.h" />
     <ClInclude Include="Utility\MathUtils.h" />
     <ClInclude Include="Utility\Utils.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="Shaders\Color.hlsl" />
-    <FxCompile Include="Shaders\LightingUtil.hlsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -6,6 +6,8 @@
 #include "Common/Model.h"
 #include "Common/FrameResource.h"
 #include "Common/Scene.h"
+#include "Scene/ShadowMap.h"
+#include "Common/Camera.h"
 
 using Microsoft::WRL::ComPtr;
 using namespace DirectX;
@@ -45,6 +47,14 @@ struct RenderItem
     int BaseVertexLocation = 0;
 };
 
+enum class RenderLayer : int
+{
+    Opaque = 0,
+    Debug,
+    Sky,
+    Count
+};
+
 class Application : public Core
 {
 public:
@@ -67,13 +77,16 @@ private:
     virtual void OnMouseMove(WPARAM btnState, int x, int y)override;
 
     void OnKeyboardInput(const Timer& gt);
-    void UpdateCamera(const Timer& gt);
     void AnimateMaterials(const Timer& gt);
     void UpdateObjectCBs(const Timer& gt);
-    void UpdateMaterialCBs(const Timer& gt);
     void UpdateMainPassCB(const Timer& gt);
+    void UpdateMaterialBuffer(const Timer& gt);
+    void UpdateShadowTransform(const Timer& gt);
+    void UpdateShadowPassCB(const Timer& gt);
 
+    void LoadTextures();
     void BuildRootSignature();
+    void BuildDescriptorHeaps();
     void BuildShadersAndInputLayout();
     void BuildShapeGeometry();
     void BuildSkullGeometry();
@@ -82,18 +95,24 @@ private:
     void BuildMaterials();
     void BuildRenderItems();
     void DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vector<RenderItem*>& ritems);
+    void DrawSceneToShadowMap();
 
-    std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> GetStaticSamplers();
+    std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> GetStaticSamplers();
 
     //// Assimp
-    void LoadAssetFromAssimp(const std::string filepath);
-    void processNode(aiNode* ainode, const aiScene* aiscene, Model* assimpModel);
+   /* void LoadAssetFromAssimp(const std::string filepath);
+    void processNode(aiNode* ainode, const aiScene* aiscene, Model* assimpModel);*/
 private:
     std::vector<std::unique_ptr<FrameResource>> mFrameResources;
     FrameResource* mCurrFrameResource = nullptr;
     int mCurrFrameResourceIndex = 0;
 
     UINT mCbvSrvDescriptorSize = 0;
+    UINT mShadowMapHeapIndex = 0;
+    UINT mSkyTexHeapIndex = 0;
+
+    UINT mNullCubeSrvIndex = 0;
+    UINT mNullTexSrvIndex = 0;
 
     ComPtr<ID3D12RootSignature> mRootSignature = nullptr;
 
@@ -103,28 +122,46 @@ private:
     std::unordered_map<std::string, std::unique_ptr<Material>> mMaterials;
     std::unordered_map<std::string, std::unique_ptr<Texture>> mTextures;
     std::unordered_map<std::string, ComPtr<ID3DBlob>> mShaders;
+    std::unordered_map<std::string, ComPtr<ID3D12PipelineState>> mPSOs;
 
     std::vector<D3D12_INPUT_ELEMENT_DESC> mInputLayout;
-
-    ComPtr<ID3D12PipelineState> mOpaquePSO = nullptr;
 
     // List of all the render items.
     std::vector<std::unique_ptr<RenderItem>> mAllRitems;
 
     // Render items divided by PSO.
-    std::vector<RenderItem*> mOpaqueRitems;
+    std::vector<RenderItem*> mRitemLayer[(int)RenderLayer::Count];
+
+    Camera mCamera;
 
     PassConstants mMainPassCB;
+    PassConstants mShadowPassCB;
 
-    XMFLOAT3 mEyePos = { 0.0f, 0.0f, 0.0f };
-    XMFLOAT4X4 mView = MathUtils::Identity4x4();
-    XMFLOAT4X4 mProj = MathUtils::Identity4x4();
+    float mLightNearZ = 0.0f;
+    float mLightFarZ = 0.0f;
+    XMFLOAT3 mLightPosW;
+    XMFLOAT4X4 mLightView = MathUtils::Identity4x4();
+    XMFLOAT4X4 mLightProj = MathUtils::Identity4x4();
+    XMFLOAT4X4 mShadowTransform = MathUtils::Identity4x4();
+
+    float mLightRotationAngle = 0.0f;
+    XMFLOAT3 mBaseLightDirections[3] = {
+        XMFLOAT3(0.57735f, -0.57735f, 0.57735f),
+        XMFLOAT3(-0.57735f, -0.57735f, 0.57735f),
+        XMFLOAT3(0.0f, -0.707f, -0.707f)
+    };
+    XMFLOAT3 mRotatedLightDirections[3];
 
     float mTheta = 1.5f * XM_PI;
     float mPhi = 0.2f * XM_PI;
     float mRadius = 15.0f;
 
     POINT mLastMousePos;
+
+    // ShadowMap
+    std::unique_ptr<ShadowMap> mShadowMap;
+    CD3DX12_GPU_DESCRIPTOR_HANDLE mNullSrv;
+    DirectX::BoundingSphere mSceneBounds;
 
     // Assimp
     Model* AssimpModel;

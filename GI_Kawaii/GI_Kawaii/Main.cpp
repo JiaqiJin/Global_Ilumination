@@ -33,4 +33,7 @@ Initialize
     - Build a frame resource for each frame (All Render objects).
     - Build Descriptor Heap ()
     - Build Constante Buffer (creating constant buffer view for each frame resource object)
+
+    CD3DX12_ROOT_PARAMETER slotRootParameter[5];
+    SetGraphicsRootConstantBufferView(rootParameterIndex); -> [0-4];
 */
