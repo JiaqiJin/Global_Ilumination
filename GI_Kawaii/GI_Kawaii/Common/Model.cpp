@@ -136,6 +136,16 @@ void Model::SetWorldMatrix(const DirectX::XMFLOAT4X4& mat)
     World = mat;
 }
 
+float Model::getObj2VoxelScale()
+{
+    return Obj2VoxelScale;
+}
+
+void Model::setObj2VoxelScale(float _scale)
+{
+    Obj2VoxelScale = _scale;
+}
+
 DirectX::XMFLOAT4X4& Model::GetWorldMatrix()
 {
     return World;

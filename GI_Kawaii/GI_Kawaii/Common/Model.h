@@ -53,6 +53,8 @@ public:
 
 	void SetWorldMatrix(const DirectX::XMFLOAT4X4& mat);
 	DirectX::XMFLOAT4X4& GetWorldMatrix();
+	float getObj2VoxelScale();
+	void setObj2VoxelScale(float _scale);
 
 	void AppendAssimpMesh(const aiScene* aiscene, aiMesh* aimesh);
 
@@ -84,6 +86,8 @@ protected:
 
 	D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
 	D3D12_INDEX_BUFFER_VIEW indexBufferView;
+
+	float Obj2VoxelScale = 1.0f;
 
 	// System memory copies.  Use Blobs because the vertex/index format can be generic.
 	// It is up to the client to cast appropriately.  

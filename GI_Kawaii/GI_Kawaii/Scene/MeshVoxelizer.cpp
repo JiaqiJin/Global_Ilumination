@@ -125,10 +125,43 @@ void MeshVoxelizer::InitVoxelizer()
 
 void MeshVoxelizer::PopulateUniformData()
 {
+	float sceneRadius = 400.0f;
+	DirectX::XMFLOAT3 eyePos = DirectX::XMFLOAT3(0.0f, 0.0, -sceneRadius);
+	DirectX::XMFLOAT3 targetPos = DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f);
+	DirectX::XMFLOAT3 up = DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f);
 
+	DirectX::XMMATRIX VoxelView = DirectX::XMMatrixLookAtLH(DirectX::XMLoadFloat3(&eyePos), DirectX::XMLoadFloat3(&targetPos),
+		DirectX::XMLoadFloat3(&up));
+	DirectX::XMMATRIX VoxelProj = DirectX::XMMatrixOrthographicLH(sceneRadius, sceneRadius, 0.0f, 1000.0f);
+
+	DirectX::XMStoreFloat4x4(&mData.mVoxelView, VoxelView);
+	DirectX::XMStoreFloat4x4(&mData.mVoxelProj, VoxelProj);
+}
+
+void MeshVoxelizer::SetDescriptor4Voxel(DX12_DescriptorHeap* descHeap)
+{
+	// SRV
+	for (auto& voxel : mVoxelTexture)
+	{
+		auto meshVoxelizerCPUUavHandle = descHeap->GetCPUHandle(descHeap->getCurrentOffsetRef());
+		auto meshVoxelizerGPUUavHandle = descHeap->GetGPUHandle(descHeap->getCurrentOffsetRef());
+		descHeap->incrementCurrentOffset();
+		voxel.second->SetupUAVCPUGPUDescOffsets(meshVoxelizerCPUUavHandle, meshVoxelizerGPUUavHandle);
+	}
+	// UAV
+	for (auto& voxel : mVoxelTexture)
+	{
+		auto meshVoxelizerCPUUavHandle = descHeap->GetCPUHandle(descHeap->getCurrentOffsetRef());
+		auto meshVoxelizerGPUUavHandle = descHeap->GetGPUHandle(descHeap->getCurrentOffsetRef());
+		descHeap->incrementCurrentOffset();
+		voxel.second->SetupSRVCPUGPUDescOffsets(meshVoxelizerCPUUavHandle, meshVoxelizerGPUUavHandle);
+	}
 }
 
 void MeshVoxelizer::OnResize(UINT newX, UINT newY, UINT newZ)
 {
-
+	for (auto& tex : mVoxelTexture)
+	{
+		tex.second->OnResize(newX, newY, newZ);
+	}
 }

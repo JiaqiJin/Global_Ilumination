@@ -8,6 +8,9 @@
 #include "Common/Scene.h"
 #include "Scene/ShadowMap.h"
 #include "Common/Camera.h"
+#include "Scene/MeshVoxelizer.h"
+#include "RHI/DX12/DX12_DescriptorHeap.h"
+#include "Common/Texture.h"
 
 using Microsoft::WRL::ComPtr;
 using namespace DirectX;
@@ -45,14 +48,6 @@ struct RenderItem
     UINT IndexCount = 0;
     UINT StartIndexLocation = 0;
     int BaseVertexLocation = 0;
-};
-
-enum class RenderLayer : int
-{
-    Opaque = 0,
-    Debug,
-    Sky,
-    Count
 };
 
 class Application : public Core
@@ -120,9 +115,12 @@ private:
 
     std::unordered_map<std::string, std::unique_ptr<MeshGeometry>> mGeometries;
     std::unordered_map<std::string, std::unique_ptr<Material>> mMaterials;
-    std::unordered_map<std::string, std::unique_ptr<Texture>> mTextures;
+    std::unordered_map<std::string, std::unique_ptr<L_Texture>> mTextures;
     std::unordered_map<std::string, ComPtr<ID3DBlob>> mShaders;
     std::unordered_map<std::string, ComPtr<ID3D12PipelineState>> mPSOs;
+    //std::unordered_map<std::string, std::unique_ptr<DX12_DescriptorHeap>> mSrvHeaps;
+
+
 
     std::vector<D3D12_INPUT_ELEMENT_DESC> mInputLayout;
 
@@ -163,6 +161,9 @@ private:
     CD3DX12_GPU_DESCRIPTOR_HANDLE mNullSrv;
     DirectX::BoundingSphere mSceneBounds;
 
-    // Assimp
-    Model* AssimpModel;
+    // Mesh Voxelizer
+    std::unique_ptr<MeshVoxelizer> mMeshVoxelizer;
+
+    // Test
+    Texture* TestTexture = nullptr;
 };

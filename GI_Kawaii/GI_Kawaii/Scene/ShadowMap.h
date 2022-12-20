@@ -24,6 +24,11 @@ public:
 		CD3DX12_CPU_DESCRIPTOR_HANDLE hCpuSrv,
 		CD3DX12_GPU_DESCRIPTOR_HANDLE hGpuSrv,
 		CD3DX12_CPU_DESCRIPTOR_HANDLE hCpuDsv);
+
+	void BuildDescriptors(
+		D3D12_CPU_DESCRIPTOR_HANDLE hCpuSrv,
+		D3D12_GPU_DESCRIPTOR_HANDLE hGpuSrv,
+		D3D12_CPU_DESCRIPTOR_HANDLE hCpuDsv);
 private:
 	void BuildResource();
 	void BuildDescriptors();

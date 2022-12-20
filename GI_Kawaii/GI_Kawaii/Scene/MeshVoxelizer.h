@@ -1,5 +1,13 @@
 #pragma once
 
+#include "../RHI/DX12/DX12_DescriptorHeap.h"
+
+struct MeshVoxelData
+{
+	DirectX::XMFLOAT4X4 mVoxelView = MathUtils::Identity4x4();
+	DirectX::XMFLOAT4X4 mVoxelProj = MathUtils::Identity4x4();
+};
+
 enum class VOXEL_TEXTURE_TYPE
 {
 	ALBEDO = 0, NORMAL, EMISSIVE, RADIANCE, FLAG, COUNT
@@ -18,7 +26,7 @@ public:
 	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandle4UAV() const { return mhGPUuav; }
 	D3D12_CPU_DESCRIPTOR_HANDLE GetCPUHandle4SRV() const { return mhCPUsrv; }
 	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandle4SRV() const { return mhGPUsrv; }
-	UINT GetNumDescriptors() { mNumDescriptors; }
+	UINT GetNumDescriptors() { return mNumDescriptors; }
 	D3D12_VIEWPORT Viewport() const { return mViewPort; }
 	D3D12_RECT ScissorRect() const { return mScissorRect; }
 
@@ -68,6 +76,9 @@ public:
 	void InitVoxelizer();
 	void OnResize(UINT newX, UINT newY, UINT newZ);
 
+	void SetDescriptor4Voxel(DX12_DescriptorHeap* descHeap);
+
+	MeshVoxelData& GetUniformData() { return mData; }
 	D3D12_VIEWPORT Viewport() const { return mViewPort; }
 	D3D12_RECT ScissorRect() const { return mScissorRect; }
 
@@ -85,5 +96,6 @@ private:
 	D3D12_VIEWPORT mViewPort;
 	D3D12_RECT mScissorRect;
 
+	MeshVoxelData mData;
 	std::unordered_map<VOXEL_TEXTURE_TYPE, std::unique_ptr<VoxelizerTexture>> mVoxelTexture;
 };

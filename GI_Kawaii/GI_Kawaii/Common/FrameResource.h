@@ -41,7 +41,7 @@ struct Material
     DirectX::XMFLOAT4X4 MatTransform = MathUtils::Identity4x4();
 };
 
-struct Texture
+struct L_Texture
 {
     // Unique material name for lookup.
     std::string Name;
@@ -69,6 +69,10 @@ struct PassConstants
     float FarZ = 0.0f;
     float TotalTime = 0.0f;
     float DeltaTime = 0.0f;
+
+    DirectX::XMFLOAT4X4 VoxelView = MathUtils::Identity4x4();
+    DirectX::XMFLOAT4X4 VoxelProj = MathUtils::Identity4x4();
+    DirectX::XMFLOAT4X4 VoxelViewProj = MathUtils::Identity4x4();
 
     DirectX::XMFLOAT4 AmbientLight = { 0.0f, 0.0f, 0.0f, 1.0f };
 
