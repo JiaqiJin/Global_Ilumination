@@ -118,7 +118,7 @@ private:
     std::unordered_map<std::string, std::unique_ptr<L_Texture>> mTextures;
     std::unordered_map<std::string, ComPtr<ID3DBlob>> mShaders;
     std::unordered_map<std::string, ComPtr<ID3D12PipelineState>> mPSOs;
-    //std::unordered_map<std::string, std::unique_ptr<DX12_DescriptorHeap>> mSrvHeaps;
+    std::unordered_map<std::string, std::unique_ptr<DX12_DescriptorHeap>> mSrvHeaps;
 
 
 
@@ -163,6 +163,9 @@ private:
 
     // Mesh Voxelizer
     std::unique_ptr<MeshVoxelizer> mMeshVoxelizer;
+
+    // Scene
+    std::unique_ptr<Scene> mScene;
 
     // Test
     Texture* TestTexture = nullptr;

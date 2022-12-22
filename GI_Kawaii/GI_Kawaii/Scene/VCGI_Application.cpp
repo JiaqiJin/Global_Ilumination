@@ -43,6 +43,9 @@ bool Application::Initialize()
 	// Reset the command list to prep for initialization commands.
 	ThrowIfFailed(mCommandList->Reset(mDirectCmdListAlloc.Get(), nullptr));
 
+	mScene = std::make_unique<Scene>(md3dDevice.Get(), mCommandList.Get(), mClientWidth, mClientHeight);
+	mScene->InitScene();
+
 	mCamera.SetPosition(0.0f, 2.0f, -15.0f);
 
 	// Get the increment size of a descriptor in this heap type.  This is hardware specific, 

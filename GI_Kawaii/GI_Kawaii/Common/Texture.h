@@ -34,7 +34,7 @@ private:
     WICPixelFormatGUID GetConvertToWICFormat(WICPixelFormatGUID& wicFormatGUID);
 
     void cleanUpImageByte();
-protected:
+public:
     INT64 textureID;
 
     std::string Name;

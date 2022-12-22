@@ -6,29 +6,21 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
-enum ModelType
-{ 
-	TEMPLATE_MODEL = 0, 
-	ASSIMP_MODEL = 1, 
-	QUAD_MODEL = 2, GRID_MODEL = 3, 
-	CUBE_MODEL = 4, 
-	SPHERE_MODEL = 5, 
-	CYLINDER_MODEL = 6 
-};
+enum ModelType { TEMPLATE_MODEL = 0, ASSIMP_MODEL = 1, QUAD_MODEL = 2 };
 
 // Defines a subrange of geometry in a MeshGeometry.  This is for when multiple
 // geometries are stored in one vertex and index buffer.  It provides the offsets
 // and data needed to draw a subset of geometry stores in the vertex and index 
 // buffers so that we can implement the technique described by Figure 6.3.
-struct SubMeshGeometry
-{
+struct Mesh {
+
+	std::string materialName;
+
 	UINT IndexCount = 0;
 	UINT StartIndexLocation = 0;
 	INT BaseVertexLocation = 0;
 
-	std::string MaterialName;
-
-	DirectX::BoundingBox Bounds;
+	d3dUtil::Bound Bounds;
 };
 
 class Model
@@ -47,7 +39,7 @@ public:
 
 	D3D12_VERTEX_BUFFER_VIEW getVertexBufferView() const;
 	D3D12_INDEX_BUFFER_VIEW getIndexBufferView() const;
-	std::unordered_map<std::string, SubMeshGeometry>& getDrawArgs();
+	std::unordered_map<std::string, Mesh>& getDrawArgs();
 	std::vector<Vertex> getVertices();
 	std::vector<uint32_t> getIndices();
 
@@ -55,6 +47,7 @@ public:
 	DirectX::XMFLOAT4X4& GetWorldMatrix();
 	float getObj2VoxelScale();
 	void setObj2VoxelScale(float _scale);
+	const d3dUtil::Bound& getBounds() const;
 
 	void AppendAssimpMesh(const aiScene* aiscene, aiMesh* aimesh);
 
@@ -62,12 +55,6 @@ protected:
 	void buildGeometry();
 	void buildQuadGeometry();
 	void buildGeometryAssimp();
-
-	void buildSphereGeometry();
-	void buildCubeGeometry();
-	void buildGridGeometry();
-	void buildCylinderGeometry();
-
 public:
 	std::string Name;
 	ModelType modelType;
@@ -75,9 +62,11 @@ public:
 	// A MeshGeometry may store multiple geometries in one vertex/index buffer.
 	// Use this container to define the Submesh geometries so we can draw
 	// the Submeshes individually.
-	std::unordered_map<std::string, SubMeshGeometry> DrawArgs;
+	std::unordered_map<std::string, Mesh> DrawArgs;
 
 protected:
+	UINT globalMeshID;
+
 	std::vector<Vertex> vertices;
 	std::vector<uint32_t> indices; // specifically for large meshes whoes index size > 65535
 
@@ -105,4 +94,6 @@ protected:
 	UINT VertexBufferByteSize = 0;
 	DXGI_FORMAT IndexFormat = DXGI_FORMAT_R16_UINT;
 	UINT IndexBufferByteSize = 0;
+
+	d3dUtil::Bound mBounds;
 };

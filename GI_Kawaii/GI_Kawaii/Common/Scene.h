@@ -4,6 +4,7 @@
 #include "Camera.h"
 #include "FrameResource.h"
 #include "Texture.h"
+#include "../RHI/DX12/DX12_CommandContext.h"
 
 enum class RenderLayer : int
 {
@@ -11,8 +12,6 @@ enum class RenderLayer : int
 	Debug,
 	Gbuffer,
 	Sky,
-	Dynamic,
-	Static,
 	Count
 };
 
@@ -50,6 +49,8 @@ struct ObjectInfo
 	UINT ObjCBIndex = -1;
 
 	d3dUtil::Bound mBound;
+
+	float Obj2VoxelScale;
 };
 
 class Scene
@@ -68,9 +69,9 @@ public:
 	std::unordered_map<std::string, std::unique_ptr<Texture>>& getTexturesMap();
 	std::unordered_map<std::string, std::unique_ptr<Model>>& getModelsMap();
 	std::unordered_map<std::string, std::unique_ptr<Camera>>& getCamerasMap();
-	std::unordered_map<std::string, std::unique_ptr<ObjectInfo>>& getObjectInfos();
+	std::vector<std::unique_ptr<ObjectInfo>>& getObjectInfos();
 private:
-	void BuildMaterials();
+	void LoadMaterials();
 	void LoadTextures();
 	void LoadModels();
 	void PopulateMeshInfos();
@@ -88,7 +89,11 @@ private:
 	std::unordered_map<std::string, std::unique_ptr<Texture>> mTextures;
 	std::unordered_map<std::string, std::unique_ptr<Material>> mMaterials;
 	std::unordered_map<std::string, std::unique_ptr<Camera>> mCameras;
-	std::unordered_map<std::string, std::unique_ptr<ObjectInfo>> mObjectInfos;
+
+	std::vector<std::unique_ptr<ObjectInfo>> mObjectInfos;
+	std::vector<std::vector<ObjectInfo*>> mObjectInfoLayer;
+
+	std::shared_ptr<DX12_CommandContext> cpyCommandContext;
 
 	UINT globalTextureSRVDescriptorHeapIndex = 0;
 	UINT globalMatCBindex = 0;
