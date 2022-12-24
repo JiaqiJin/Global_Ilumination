@@ -266,3 +266,8 @@ std::vector<std::unique_ptr<ObjectInfo>>& Scene::getObjectInfos()
 {
 	return mObjectInfos;
 }
+
+const std::vector<std::vector<ObjectInfo*>>& Scene::getObjectInfoLayer()
+{
+    return mObjectInfoLayer;
+}

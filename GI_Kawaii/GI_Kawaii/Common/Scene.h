@@ -70,6 +70,7 @@ public:
 	std::unordered_map<std::string, std::unique_ptr<Model>>& getModelsMap();
 	std::unordered_map<std::string, std::unique_ptr<Camera>>& getCamerasMap();
 	std::vector<std::unique_ptr<ObjectInfo>>& getObjectInfos();
+	const std::vector<std::vector<ObjectInfo*>>& getObjectInfoLayer();
 private:
 	void LoadMaterials();
 	void LoadTextures();

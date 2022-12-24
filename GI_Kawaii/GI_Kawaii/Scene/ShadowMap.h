@@ -1,6 +1,28 @@
 #pragma once
 
 #include "../Utility/Utils.h"
+#include "../Common/Timer.h"
+
+using namespace DirectX;
+
+struct ShadowMapData
+{
+	//shadow map
+	float mLightNearZ = 0.0f;
+	float mLightFarZ = 0.0f;
+	XMFLOAT3 mLightPosW;
+	XMFLOAT4X4 mLightView = MathUtils::Identity4x4();
+	XMFLOAT4X4 mLightProj = MathUtils::Identity4x4();
+	XMFLOAT4X4 mShadowTransform = MathUtils::Identity4x4();
+	float mLightRotationAngle = 0.0f;
+	XMFLOAT3 mBaseLightDirections[3] = 
+	{
+		XMFLOAT3(0.3f, -1.0f, 0.2f),
+		XMFLOAT3(-0.57735f, -0.57735f, 0.57735f),
+		XMFLOAT3(0.0f, -0.707f, -0.707f)
+	};
+	XMFLOAT3 mRotatedLightDirections[3];
+};
 
 class ShadowMap
 {
@@ -10,6 +32,8 @@ public:
 	ShadowMap(const ShadowMap& rhs) = delete;
 	ShadowMap& operator=(const ShadowMap& rhs) = delete;
 	~ShadowMap() = default;
+
+	void Update(const Timer& gt);
 
 	UINT Width()const;
 	UINT Height()const;
@@ -29,6 +53,8 @@ public:
 		D3D12_CPU_DESCRIPTOR_HANDLE hCpuSrv,
 		D3D12_GPU_DESCRIPTOR_HANDLE hGpuSrv,
 		D3D12_CPU_DESCRIPTOR_HANDLE hCpuDsv);
+
+	ShadowMapData mShadowMapData;
 private:
 	void BuildResource();
 	void BuildDescriptors();

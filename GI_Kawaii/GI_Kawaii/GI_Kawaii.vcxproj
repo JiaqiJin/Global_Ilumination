@@ -152,6 +152,7 @@
     <ClCompile Include="Common\DDSTextureLoader.cpp" />
     <ClCompile Include="Common\Texture.cpp" />
     <ClCompile Include="RHI\DX12\DX12_CommandContext.cpp" />
+    <ClCompile Include="Scene\DeferredRenderer.cpp" />
     <ClCompile Include="Scene\MeshVoxelizer.cpp" />
     <ClCompile Include="Scene\ShadowMap.cpp" />
     <ClCompile Include="Common\Core.cpp" />
@@ -185,6 +186,7 @@
     <ClInclude Include="pch.h" />
     <ClInclude Include="RHI\DX12\DX12_CommandContext.h" />
     <ClInclude Include="RHI\DX12\DX12_DescriptorHeap.h" />
+    <ClInclude Include="Scene\DeferredRenderer.h" />
     <ClInclude Include="Scene\MeshVoxelizer.h" />
     <ClInclude Include="Scene\ShadowMap.h" />
     <ClInclude Include="Utility\MathUtils.h" />

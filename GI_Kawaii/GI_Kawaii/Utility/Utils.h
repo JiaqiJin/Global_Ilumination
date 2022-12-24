@@ -75,18 +75,14 @@ public:
 
     static int gNumFrameResources;
 
-    // ideal layout for descriptor tables (CBVs) directly inside of rootsignatures from top to 
-    // bottom (hight freq to low freq) : perDrawCall(VS) -> PerDrawCall(PS) -> perMesh(VS) -> perMesh(PS)
-    // -> perMaterial -> perFrame(VS) -> perFrame(PS)
     enum MAIN_PASS_UNIFORM {
-        OBJ_CBV,                // per object
-        MATERIAL_CBV,           // per mesh
-        MAINPASS_CBV,           // per render pass
         DIFFUSE_TEX_TABLE,
         SHADOWMAP_TEX_TABLE,
-        G_BUFFER, // pos, albedo, normal, depth
+        G_BUFFER,
         VOXEL,
-        RADIANCEMIP,
+        OBJ_CBV,
+        MAINPASS_CBV,
+        MATERIAL_CBV,
         COUNT
     };
 

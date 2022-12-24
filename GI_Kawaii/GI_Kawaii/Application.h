@@ -11,6 +11,8 @@
 #include "Scene/MeshVoxelizer.h"
 #include "RHI/DX12/DX12_DescriptorHeap.h"
 #include "Common/Texture.h"
+#include "Scene/DeferredRenderer.h"
+#include "Scene/DeferredRenderer.h"
 
 using Microsoft::WRL::ComPtr;
 using namespace DirectX;
@@ -72,25 +74,21 @@ private:
     virtual void OnMouseMove(WPARAM btnState, int x, int y)override;
 
     void OnKeyboardInput(const Timer& gt);
-    void AnimateMaterials(const Timer& gt);
+    void UpdateCBs(const Timer& gt);
     void UpdateObjectCBs(const Timer& gt);
     void UpdateMainPassCB(const Timer& gt);
-    void UpdateMaterialBuffer(const Timer& gt);
-    void UpdateShadowTransform(const Timer& gt);
+    void UpdateMaterialCB(const Timer& gt);
+    void UpdateCamera(const Timer& gt);
     void UpdateShadowPassCB(const Timer& gt);
 
-    void LoadTextures();
     void BuildRootSignature();
     void BuildDescriptorHeaps();
     void BuildShadersAndInputLayout();
-    void BuildShapeGeometry();
-    void BuildSkullGeometry();
     void BuildPSOs();
     void BuildFrameResources();
-    void BuildMaterials();
-    void BuildRenderItems();
-    void DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vector<RenderItem*>& ritems);
+    void DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vector<ObjectInfo*>& objInfos);
     void DrawSceneToShadowMap();
+    void VoxelizeMesh();
 
     std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> GetStaticSamplers();
 
@@ -109,8 +107,6 @@ private:
     UINT mNullCubeSrvIndex = 0;
     UINT mNullTexSrvIndex = 0;
 
-    ComPtr<ID3D12RootSignature> mRootSignature = nullptr;
-
     ComPtr<ID3D12DescriptorHeap> mSrvDescriptorHeap = nullptr;
 
     std::unordered_map<std::string, std::unique_ptr<MeshGeometry>> mGeometries;
@@ -119,8 +115,7 @@ private:
     std::unordered_map<std::string, ComPtr<ID3DBlob>> mShaders;
     std::unordered_map<std::string, ComPtr<ID3D12PipelineState>> mPSOs;
     std::unordered_map<std::string, std::unique_ptr<DX12_DescriptorHeap>> mSrvHeaps;
-
-
+    std::unordered_map<std::string, ComPtr<ID3D12RootSignature>> mRootSignatures;
 
     std::vector<D3D12_INPUT_ELEMENT_DESC> mInputLayout;
 
@@ -135,21 +130,9 @@ private:
     PassConstants mMainPassCB;
     PassConstants mShadowPassCB;
 
-    float mLightNearZ = 0.0f;
-    float mLightFarZ = 0.0f;
-    XMFLOAT3 mLightPosW;
-    XMFLOAT4X4 mLightView = MathUtils::Identity4x4();
-    XMFLOAT4X4 mLightProj = MathUtils::Identity4x4();
-    XMFLOAT4X4 mShadowTransform = MathUtils::Identity4x4();
-
-    float mLightRotationAngle = 0.0f;
-    XMFLOAT3 mBaseLightDirections[3] = {
-        XMFLOAT3(0.57735f, -0.57735f, 0.57735f),
-        XMFLOAT3(-0.57735f, -0.57735f, 0.57735f),
-        XMFLOAT3(0.0f, -0.707f, -0.707f)
-    };
-    XMFLOAT3 mRotatedLightDirections[3];
-
+    XMFLOAT3 mEyePos = { 0.0f, 0.0f, 0.0f };
+    XMFLOAT4X4 mView = MathUtils::Identity4x4();
+    XMFLOAT4X4 mProj = MathUtils::Identity4x4();
     float mTheta = 1.5f * XM_PI;
     float mPhi = 0.2f * XM_PI;
     float mRadius = 15.0f;
@@ -164,9 +147,11 @@ private:
     // Mesh Voxelizer
     std::unique_ptr<MeshVoxelizer> mMeshVoxelizer;
 
+    // Deffered
+    std::unique_ptr<DeferredRenderer> mDefferedRenderer;
+
     // Scene
     std::unique_ptr<Scene> mScene;
 
-    // Test
-    Texture* TestTexture = nullptr;
+    bool mIsWireframe = false;
 };

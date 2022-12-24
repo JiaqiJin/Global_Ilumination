@@ -72,6 +72,9 @@
     <ClCompile Include="RHI\DX12\DX12_CommandContext.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Scene\DeferredRenderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
@@ -132,6 +135,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="RHI\DX12\DX12_CommandContext.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Scene\DeferredRenderer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

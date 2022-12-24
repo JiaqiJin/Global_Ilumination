@@ -1,21 +1,63 @@
 #include "../pch.h"
 #include "MeshVoxelizer.h"
 
-VoxelizerTexture::VoxelizerTexture(ID3D12Device* _device, UINT _x, UINT _y, UINT _z)
-	: device(_device), mX(_x), mY(_y), mZ(_z) 
+MeshVoxelizer::MeshVoxelizer(ID3D12Device* _device, UINT _x, UINT _y, UINT _z) 
+	: device(_device), mX(_x), mY(_y), mZ(_z)
 {
-	mNumDescriptors = 2;
-
 	mViewPort = { 0.0f, 0.0f, (float)mX, (float)mY, 0.0f, 1.0f };
 	mScissorRect = { 0,0,(int)mX, (int)mY };
+	PopulateUniformData();
 }
 
-void VoxelizerTexture::Init()
+ID3D12Resource* MeshVoxelizer::getResourcePtr() 
+{
+	return m3DTexture.Get();
+}
+D3D12_CPU_DESCRIPTOR_HANDLE MeshVoxelizer::getCPUHandle4SRV() const 
+{
+	return mhCPUsrv;
+}
+D3D12_GPU_DESCRIPTOR_HANDLE MeshVoxelizer::getGPUHandle4SRV() const 
+{
+	return mhGPUsrv;
+}
+D3D12_CPU_DESCRIPTOR_HANDLE MeshVoxelizer::getCPUHandle4UAV() const 
+{
+	return mhCPUuav;
+}
+D3D12_GPU_DESCRIPTOR_HANDLE MeshVoxelizer::getGPUHandle4UAV() const 
+{
+	return mhGPUuav;
+}
+D3D12_VIEWPORT MeshVoxelizer::Viewport() const
+{
+	return mViewPort;
+}
+D3D12_RECT MeshVoxelizer::ScissorRect() const
+{
+	return mScissorRect;
+}
+MeshVoxelizerData& MeshVoxelizer::getUniformData()
+{
+	return mData;
+}
+
+void MeshVoxelizer::SetupCPUGPUDescOffsets(D3D12_CPU_DESCRIPTOR_HANDLE hCPUSrv, D3D12_GPU_DESCRIPTOR_HANDLE hGPUSrv,
+	D3D12_CPU_DESCRIPTOR_HANDLE hCPUUav, D3D12_GPU_DESCRIPTOR_HANDLE hGPUUav)
+{
+	mhCPUsrv = hCPUSrv;
+	mhGPUsrv = hGPUSrv;
+	mhCPUuav = hCPUUav;
+	mhGPUuav = hGPUUav;
+	BuildDescriptors();
+}
+
+void MeshVoxelizer::Init3DVoxelTexture()
 {
 	BuildResources();
 }
 
-void VoxelizerTexture::OnResize(UINT newX, UINT newY, UINT newZ)
+void MeshVoxelizer::OnResize(UINT newX, UINT newY, UINT newZ) 
 {
 	if ((mX != newX) || (mY != newY) || (mZ != newZ)) {
 		mX = newX;
@@ -24,14 +66,23 @@ void VoxelizerTexture::OnResize(UINT newX, UINT newY, UINT newZ)
 		mViewPort = { 0.0f, 0.0f, (float)mX, (float)mY, 0.0f, 1.0f };
 		mScissorRect = { 0,0,(int)mX, (int)mY };
 		BuildResources();
-		BuildUAVDescriptors();
+		BuildDescriptors();
 	}
 }
 
-void VoxelizerTexture::BuildUAVDescriptors()
+void MeshVoxelizer::BuildDescriptors()
 {
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = mFormat;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
+	srvDesc.Texture3D.MostDetailedMip = 0;
+	srvDesc.Texture3D.MipLevels = 1;
+	srvDesc.Texture3D.ResourceMinLODClamp = 0.0f;
+	device->CreateShaderResourceView(m3DTexture.Get(), &srvDesc, mhCPUsrv);
+
 	D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
-	uavDesc.Format = mUAVFormat;
+	uavDesc.Format = mFormat;
 	uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE3D;
 	uavDesc.Texture3D.MipSlice = 0;
 	uavDesc.Texture3D.FirstWSlice = 0;
@@ -39,19 +90,7 @@ void VoxelizerTexture::BuildUAVDescriptors()
 	device->CreateUnorderedAccessView(m3DTexture.Get(), nullptr, &uavDesc, mhCPUuav);
 }
 
-void VoxelizerTexture::BuildSRVDescriptors()
-{
-	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
-	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	srvDesc.Format = mSRVFormat;
-	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
-	srvDesc.Texture3D.MostDetailedMip = 0;
-	srvDesc.Texture3D.MipLevels = 1;
-	srvDesc.Texture3D.ResourceMinLODClamp = 0.0f;
-	device->CreateShaderResourceView(m3DTexture.Get(), &srvDesc, mhCPUsrv);
-}
-
-void VoxelizerTexture::BuildResources()
+void MeshVoxelizer::BuildResources()
 {
 	D3D12_RESOURCE_DESC texDesc;
 	ZeroMemory(&texDesc, sizeof(D3D12_RESOURCE_DESC));
@@ -77,91 +116,18 @@ void VoxelizerTexture::BuildResources()
 	));
 }
 
-void VoxelizerTexture::SetupUAVCPUGPUDescOffsets(D3D12_CPU_DESCRIPTOR_HANDLE hCPUUav, D3D12_GPU_DESCRIPTOR_HANDLE hGPUUav)
+void MeshVoxelizer::PopulateUniformData() 
 {
-	mhCPUuav = hCPUUav;
-	mhGPUuav = hGPUUav;
-	BuildUAVDescriptors();
-}
-
-void VoxelizerTexture::SetupSRVCPUGPUDescOffsets(D3D12_CPU_DESCRIPTOR_HANDLE hCPUSrv, D3D12_GPU_DESCRIPTOR_HANDLE hGPUSrv)
-{
-	mhCPUsrv = hCPUSrv;
-	mhGPUsrv = hGPUSrv;
-	BuildSRVDescriptors();
-}
-
-// -----------------------------------------
-
-MeshVoxelizer::MeshVoxelizer(ID3D12Device* _device, UINT _x, UINT _y, UINT _z)
-	: device(_device), mX(_x), mY(_y), mZ(_z)
-{
-	mNumDescriptors = 0;
-	mViewPort = { 0.0f, 0.0f, (float)mX, (float)mY, 0.0f, 1.0f };
-	mScissorRect = { 0,0,(int)mX, (int)mY };
-
-	PopulateUniformData();
-}
-
-void MeshVoxelizer::InitVoxelizer()
-{
-	auto V_Albedo = std::make_unique<VoxelizerTexture>(device, mX, mY, mZ);
-	auto V_Normal = std::make_unique<VoxelizerTexture>(device, mX, mY, mZ);
-	auto V_Emissive = std::make_unique<VoxelizerTexture>(device, mX, mY, mZ);
-	auto V_Radiance = std::make_unique<VoxelizerTexture>(device, mX, mY, mZ);
-	auto V_Flag = std::make_unique<VoxelizerTexture>(device, mX, mY, mZ);
-	mVoxelTexture[VOXEL_TEXTURE_TYPE::ALBEDO] = std::move(V_Albedo);
-	mVoxelTexture[VOXEL_TEXTURE_TYPE::NORMAL] = std::move(V_Normal);
-	mVoxelTexture[VOXEL_TEXTURE_TYPE::EMISSIVE] = std::move(V_Emissive);
-	mVoxelTexture[VOXEL_TEXTURE_TYPE::RADIANCE] = std::move(V_Radiance);
-	mVoxelTexture[VOXEL_TEXTURE_TYPE::FLAG] = std::move(V_Flag);
-
-	for (auto& tex : mVoxelTexture)
-	{
-		tex.second->Init();
-		mNumDescriptors += tex.second->GetNumDescriptors();
-	}
-}
-
-void MeshVoxelizer::PopulateUniformData()
-{
-	float sceneRadius = 400.0f;
-	DirectX::XMFLOAT3 eyePos = DirectX::XMFLOAT3(0.0f, 0.0, -sceneRadius);
-	DirectX::XMFLOAT3 targetPos = DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f);
+	float sceneRadius = 200.0f;
+	DirectX::XMFLOAT3 eyePos = DirectX::XMFLOAT3(0.0f, sceneRadius / 2.0f, -sceneRadius);
+	DirectX::XMFLOAT3 tartPos = DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f);
 	DirectX::XMFLOAT3 up = DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f);
 
-	DirectX::XMMATRIX VoxelView = DirectX::XMMatrixLookAtLH(DirectX::XMLoadFloat3(&eyePos), DirectX::XMLoadFloat3(&targetPos),
+
+	DirectX::XMMATRIX VoxelView = DirectX::XMMatrixLookAtLH(DirectX::XMLoadFloat3(&eyePos), DirectX::XMLoadFloat3(&tartPos),
 		DirectX::XMLoadFloat3(&up));
 	DirectX::XMMATRIX VoxelProj = DirectX::XMMatrixOrthographicLH(sceneRadius, sceneRadius, 0.0f, 1000.0f);
 
 	DirectX::XMStoreFloat4x4(&mData.mVoxelView, VoxelView);
 	DirectX::XMStoreFloat4x4(&mData.mVoxelProj, VoxelProj);
-}
-
-void MeshVoxelizer::SetDescriptor4Voxel(DX12_DescriptorHeap* descHeap)
-{
-	// SRV
-	for (auto& voxel : mVoxelTexture)
-	{
-		auto meshVoxelizerCPUUavHandle = descHeap->GetCPUHandle(descHeap->getCurrentOffsetRef());
-		auto meshVoxelizerGPUUavHandle = descHeap->GetGPUHandle(descHeap->getCurrentOffsetRef());
-		descHeap->incrementCurrentOffset();
-		voxel.second->SetupUAVCPUGPUDescOffsets(meshVoxelizerCPUUavHandle, meshVoxelizerGPUUavHandle);
-	}
-	// UAV
-	for (auto& voxel : mVoxelTexture)
-	{
-		auto meshVoxelizerCPUUavHandle = descHeap->GetCPUHandle(descHeap->getCurrentOffsetRef());
-		auto meshVoxelizerGPUUavHandle = descHeap->GetGPUHandle(descHeap->getCurrentOffsetRef());
-		descHeap->incrementCurrentOffset();
-		voxel.second->SetupSRVCPUGPUDescOffsets(meshVoxelizerCPUUavHandle, meshVoxelizerGPUUavHandle);
-	}
-}
-
-void MeshVoxelizer::OnResize(UINT newX, UINT newY, UINT newZ)
-{
-	for (auto& tex : mVoxelTexture)
-	{
-		tex.second->OnResize(newX, newY, newZ);
-	}
 }

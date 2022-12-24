@@ -142,3 +142,55 @@ void ShadowMap::BuildDescriptors()
 	dsvDesc.Texture2D.MipSlice = 0;
 	md3dDevice->CreateDepthStencilView(mShadowMap.Get(), &dsvDesc, mhCpuDsv);
 }
+
+void ShadowMap::Update(const Timer& gt)
+{
+	// update light directions
+	mShadowMapData.mLightRotationAngle += 0.1f * gt.DeltaTime();
+	XMMATRIX R = DirectX::XMMatrixRotationY(mShadowMapData.mLightRotationAngle);
+	for (int i = 0; i < 3; ++i)
+	{
+		XMVECTOR lightDir = XMLoadFloat3(&mShadowMapData.mBaseLightDirections[i]);
+		lightDir = DirectX::XMVector3TransformNormal(lightDir, R);
+		DirectX::XMStoreFloat3(&mShadowMapData.mRotatedLightDirections[i], lightDir);
+	}
+
+	// Only the first "main" light casts a shadow.
+	XMFLOAT3 sceneCenter(0.0f, 0.0f, 0.0f);
+	float sceneRadius = 200.f;
+
+	XMVECTOR lightDir = DirectX::XMLoadFloat3(&mShadowMapData.mRotatedLightDirections[0]);
+	lightDir = DirectX::XMVector3Normalize(lightDir);
+	XMVECTOR lightPos = -2.0f * sceneRadius * lightDir;
+	XMVECTOR targetPos = DirectX::XMLoadFloat3(&sceneCenter);
+	XMVECTOR lightUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+	XMMATRIX lightView = DirectX::XMMatrixLookAtLH(lightPos, targetPos, lightUp);
+
+	DirectX::XMStoreFloat3(&mShadowMapData.mLightPosW, lightPos);
+
+	XMFLOAT3 sphereCenterLS;
+	DirectX::XMStoreFloat3(&sphereCenterLS, DirectX::XMVector3TransformCoord(targetPos, lightView));
+
+	// Ortho frustum in light space encloses scene.
+	float l = sphereCenterLS.x - sceneRadius;
+	float b = sphereCenterLS.y - sceneRadius;
+	float n = sphereCenterLS.z - sceneRadius;
+	float r = sphereCenterLS.x + sceneRadius;
+	float t = sphereCenterLS.y + sceneRadius;
+	float f = sphereCenterLS.z + sceneRadius;
+
+	mShadowMapData.mLightNearZ = n;
+	mShadowMapData.mLightFarZ = f;
+	XMMATRIX lightProj = DirectX::XMMatrixOrthographicOffCenterLH(l, r, b, t, n, f);
+	//lightProj = DirectX::XMMatrixOrthographicLH(200, 200, 0, 1000);
+	// Transform NDC space [-1,+1]^2 to texture space [0,1]^2
+	XMMATRIX T(
+		0.5f, 0.0f, 0.0f, 0.0f,
+		0.0f, -0.5f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.5f, 0.5f, 0.0f, 1.0f);
+	XMMATRIX S = lightView * lightProj * T;
+	DirectX::XMStoreFloat4x4(&mShadowMapData.mLightView, lightView);
+	DirectX::XMStoreFloat4x4(&mShadowMapData.mLightProj, lightProj);
+	DirectX::XMStoreFloat4x4(&mShadowMapData.mShadowTransform, S);
+}
