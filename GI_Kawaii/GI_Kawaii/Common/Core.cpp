@@ -164,7 +164,7 @@ void Core::OnResize()
 
 	mCurrBackBuffer = 0;
 
-	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHeapHandle(mRtvHeap->GetDescriptorHeap()->GetCPUDescriptorHandleForHeapStart());
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHeapHandle(mRtvHeap->GetCPUDescriptorHandleForHeapStart());
 	for (UINT i = 0; i < SwapChainBufferCount; i++)
 	{
 		ThrowIfFailed(mSwapChain->GetBuffer(i, IID_PPV_ARGS(&mSwapChainBuffer[i])));
@@ -566,15 +566,20 @@ ID3D12Resource* Core::CurrentBackBuffer()const
 
 D3D12_CPU_DESCRIPTOR_HANDLE Core::CurrentBackBufferView() const
 {
-	return CD3DX12_CPU_DESCRIPTOR_HANDLE(
+	/*return CD3DX12_CPU_DESCRIPTOR_HANDLE(
 		mRtvHeap->GetCPUHandle(0),
+		mCurrBackBuffer,
+		mRtvDescriptorSize);*/
+	return CD3DX12_CPU_DESCRIPTOR_HANDLE(
+		mRtvHeap->GetCPUDescriptorHandleForHeapStart(),
 		mCurrBackBuffer,
 		mRtvDescriptorSize);
 }
 
 D3D12_CPU_DESCRIPTOR_HANDLE Core::DepthStencilView() const
 {
-	return mDsvHeap->GetCPUHandle(0);
+	//return mDsvHeap->GetCPUHandle(0);
+	return mDsvHeap->GetCPUDescriptorHandleForHeapStart();
 }
 
 void Core::CalculateFrameStats()

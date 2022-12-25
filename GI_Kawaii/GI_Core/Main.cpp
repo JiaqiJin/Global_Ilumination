@@ -1,6 +1,14 @@
-#include <iostream>
+#include "Common/Utils.h"
 
-int main()
+struct GRS_VERTEX
 {
-	return 0;
+	XMFLOAT4 m_vtPos;
+	XMFLOAT4 m_vtColor;
+};
+
+LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
+
+int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR    lpCmdLine, int nCmdShow)
+{
+
 }

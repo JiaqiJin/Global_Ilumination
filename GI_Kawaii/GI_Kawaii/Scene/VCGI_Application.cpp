@@ -28,11 +28,30 @@ Application::~Application()
 
 void Application::CreateRtvAndDsvDescriptorHeaps()
 {
-	mRtvHeap = std::make_unique<DX12_DescriptorHeap>();
+	/*mRtvHeap = std::make_unique<DX12_DescriptorHeap>();
 	mRtvHeap->CreateDescriptorHeap(md3dDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, (UINT)(SwapChainBufferCount), false);
 
 	mDsvHeap = std::make_unique<DX12_DescriptorHeap>();
-	mDsvHeap->CreateDescriptorHeap(md3dDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, (UINT)(2), false);
+	mDsvHeap->CreateDescriptorHeap(md3dDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, (UINT)(2), false);*/
+
+	D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc;
+	rtvHeapDesc.NumDescriptors = mRtvDescriptorSize;
+	rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+	rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	rtvHeapDesc.NodeMask = 0;
+	ThrowIfFailed(md3dDevice->CreateDescriptorHeap(
+		&rtvHeapDesc, IID_PPV_ARGS(mRtvHeap.GetAddressOf())));
+
+	// 0 ==== dsv for default swapchain
+	// 1 ==== dsv for shadow map
+
+	D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc;
+	dsvHeapDesc.NumDescriptors = mDsvDescriptorSize;
+	dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+	dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	dsvHeapDesc.NodeMask = 0;
+	ThrowIfFailed(md3dDevice->CreateDescriptorHeap(
+		&dsvHeapDesc, IID_PPV_ARGS(mDsvHeap.GetAddressOf())));
 }
 
 bool Application::Initialize()
@@ -58,6 +77,7 @@ bool Application::Initialize()
 	mMeshVoxelizer = std::make_unique<MeshVoxelizer>(md3dDevice.Get(), 256, 256, 256);
 	mMeshVoxelizer->Init3DVoxelTexture();
 
+	CreateRtvAndDsvDescriptorHeaps();
 	BuildDescriptorHeaps();
 	BuildRootSignature();
 	BuildShadersAndInputLayout();
@@ -384,17 +404,50 @@ void Application::BuildDescriptorHeaps()
 {
 	auto mMainPassSrvHeap = std::make_unique<DX12_DescriptorHeap>();
 	mMainPassSrvHeap->CreateDescriptorHeap(md3dDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
-		(UINT)mScene->getTexturesMap().size() + 1 + 2); // + 1 for shadow map + 2 for mesh voxelizer
+		(UINT)(mScene->getTexturesMap().size() + 1 + static_cast<UINT>(GBUFFER_TYPE::COUNT) + 2),
+		true); // + 1 for shadow map + gbuffer + 2 for mesh voxelizer
 	mSrvHeaps["MainPass"] = std::move(mMainPassSrvHeap);
 
 	UINT offset = 0;
-	for (auto& tex : mScene->getTexturesMap())
-	{
+	for (auto& tex : mScene->getTexturesMap()) {
 		auto texture = tex.second->mTextureBuffer;
 		auto textureDesc = tex.second->getSRVDESC();
 		md3dDevice->CreateShaderResourceView(texture.Get(), &textureDesc, mSrvHeaps["MainPass"]->GetCPUHandle(tex.second->textureID));
 		mSrvHeaps["MainPass"]->getCurrentOffsetRef()++;
 	}
+
+	// set descriptor heap addresses for shadowmap
+
+	auto shadowMapCPUSrvHandle = mSrvHeaps["MainPass"]->GetCPUHandle(mSrvHeaps["MainPass"]->getCurrentOffsetRef());
+	auto shadowMapGPUSrvHandle = mSrvHeaps["MainPass"]->GetGPUHandle(mSrvHeaps["MainPass"]->getCurrentOffsetRef());
+	mSrvHeaps["MainPass"]->getCurrentOffsetRef()++;
+	auto dsvCPUstart = mDsvHeap->GetCPUDescriptorHandleForHeapStart();
+	UINT dsvOffset = 1;
+	auto shadowMapCPUDsvHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(dsvCPUstart, dsvOffset, mDsvDescriptorSize);
+	mShadowMap->BuildDescriptors(shadowMapCPUSrvHandle, shadowMapGPUSrvHandle, shadowMapCPUDsvHandle);
+
+	// set descriptor heap addresses for deferredrenderer
+
+	auto rtvCPUstart = mRtvHeap->GetCPUDescriptorHandleForHeapStart();
+	UINT rtvOffset = SwapChainBufferCount;
+
+	for (auto& gbuffer : mDefferedRenderer->getGbuffersMap()) {
+		auto deferredRendererCPURtvHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(rtvCPUstart, rtvOffset, mRtvDescriptorSize);
+		auto deferredRendererCPUSrvHandle = mSrvHeaps["MainPass"]->GetCPUHandle(mSrvHeaps["MainPass"]->getCurrentOffsetRef());
+		auto deferredRendererGPUSrvHandle = mSrvHeaps["MainPass"]->GetGPUHandle(mSrvHeaps["MainPass"]->getCurrentOffsetRef());
+		gbuffer.second->SetupCPUGPUDescOffsets(deferredRendererCPUSrvHandle, deferredRendererGPUSrvHandle, deferredRendererCPURtvHandle);
+		mSrvHeaps["MainPass"]->getCurrentOffsetRef()++;
+		rtvOffset++;
+	}
+
+	// set descriptor heap addresses for deferredrenderer
+
+	auto meshVoxelizerCPUSrvHandle = mSrvHeaps["MainPass"]->GetCPUHandle(mSrvHeaps["MainPass"]->getCurrentOffsetRef());
+	auto meshVoxelizerGPUSrvHandle = mSrvHeaps["MainPass"]->GetGPUHandle(mSrvHeaps["MainPass"]->getCurrentOffsetRef());
+	mSrvHeaps["MainPass"]->getCurrentOffsetRef()++;
+	auto meshVoxelizerCPUUavHandle = mSrvHeaps["MainPass"]->GetCPUHandle(mSrvHeaps["MainPass"]->getCurrentOffsetRef());
+	auto meshVoxelizerGPUUavHandle = mSrvHeaps["MainPass"]->GetGPUHandle(mSrvHeaps["MainPass"]->getCurrentOffsetRef());
+	mMeshVoxelizer->SetupCPUGPUDescOffsets(meshVoxelizerCPUSrvHandle, meshVoxelizerGPUSrvHandle, meshVoxelizerCPUUavHandle, meshVoxelizerGPUUavHandle);
 }
 
 void Application::BuildShadersAndInputLayout()
