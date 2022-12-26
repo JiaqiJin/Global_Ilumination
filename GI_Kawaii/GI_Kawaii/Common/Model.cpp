@@ -1,38 +1,23 @@
 #include "../pch.h"
 #include "Model.h"
 
-Model::Model()
-{
+Model::Model() : globalMeshID(0), modelType(ModelType::TEMPLATE_MODEL) {}
+
+Model::Model(ModelType _type) : modelType(_type), globalMeshID(0) {
 
 }
 
-Model::Model(ModelType _type, std::string _matName)
-    : modelType(_type)
-{
-
+D3D12_VERTEX_BUFFER_VIEW Model::getVertexBufferView() const {
+    return vertexBufferView;
 }
 
-void Model::InitModel(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList)
-{
-    if (modelType == ModelType::TEMPLATE_MODEL)
-    {
-        buildGeometry();
-    }
-    else if (modelType == ModelType::ASSIMP_MODEL) 
-    {
-        buildGeometryAssimp();
-    }
-    else if (modelType == ModelType::QUAD_MODEL) 
-    {
-        buildQuadGeometry();
-    }
-
-    CreateBuffers(device);
-    UploadBuffers(device, cmdList);
+D3D12_INDEX_BUFFER_VIEW Model::getIndexBufferView() const {
+    return indexBufferView;
 }
 
-void Model::CreateBuffers(ID3D12Device* device)
-{
+void Model::createBuffers(ID3D12Device* device) {
+
+
     ThrowIfFailed(device->CreateCommittedResource(
         &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),// this is a default heap
         D3D12_HEAP_FLAG_NONE,
@@ -60,8 +45,9 @@ void Model::CreateBuffers(ID3D12Device* device)
     indexBufferView.SizeInBytes = IndexBufferByteSize;
 }
 
-void Model::UploadBuffers(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList)
-{
+void Model::uploadBuffers(ID3D12Device* device, DX12_CommandContext* cmdObj) {
+
+
     ThrowIfFailed(device->CreateCommittedResource(
         &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
         D3D12_HEAP_FLAG_NONE,
@@ -92,67 +78,70 @@ void Model::UploadBuffers(ID3D12Device* device, ID3D12GraphicsCommandList* cmdLi
     subResourceDataIndex.RowPitch = IndexBufferByteSize;
     subResourceDataIndex.SlicePitch = subResourceDataIndex.RowPitch;
 
-    UpdateSubresources<1>(cmdList, VertexBufferGPU.Get(), VertexBufferUploader.Get(), 0, 0, 1, &subResourceDataVertex);
-    cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(VertexBufferGPU.Get(), D3D12_RESOURCE_STATE_COPY_DEST,
-        D3D12_RESOURCE_STATE_GENERIC_READ));
+    UpdateSubresources<1>(cmdObj->getCommandListPtr(), VertexBufferGPU.Get(), VertexBufferUploader.Get(), 0, 0, 1, &subResourceDataVertex);
+    cmdObj->getCommandListPtr()->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(VertexBufferGPU.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
 
-    UpdateSubresources<1>(cmdList, IndexBufferGPU.Get(), IndexBufferUploader.Get(), 0, 0, 1, &subResourceDataIndex);
-    cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(IndexBufferGPU.Get(), 
-        D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
+    UpdateSubresources<1>(cmdObj->getCommandListPtr(), IndexBufferGPU.Get(), IndexBufferUploader.Get(), 0, 0, 1, &subResourceDataIndex);
+    cmdObj->getCommandListPtr()->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(IndexBufferGPU.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
+
 }
 
-D3D12_VERTEX_BUFFER_VIEW Model::getVertexBufferView() const
-{
-    return vertexBufferView;
-}
-
-D3D12_INDEX_BUFFER_VIEW Model::getIndexBufferView() const
-{
-    return indexBufferView;
-}
-
-std::unordered_map<std::string, Mesh>& Model::getDrawArgs()
-{
+std::unordered_map<std::string, Mesh>& Model::getDrawArgs() {
     return DrawArgs;
 }
 
-void Model::SetWorldMatrix(const DirectX::XMFLOAT4X4& mat)
-{
+void Model::setWorldMatrix(const DirectX::XMFLOAT4X4& mat) {
     World = mat;
 }
-
-float Model::getObj2VoxelScale()
-{
-    return Obj2VoxelScale;
-}
-
-void Model::setObj2VoxelScale(float _scale)
-{
-    Obj2VoxelScale = _scale;
-}
-
-DirectX::XMFLOAT4X4& Model::GetWorldMatrix()
-{
+DirectX::XMFLOAT4X4& Model::getWorldMatrix() {
     return World;
 }
 
-std::vector<Vertex> Model::getVertices()
-{
-    return vertices;
+
+
+void Model::InitModel(ID3D12Device* device, DX12_CommandContext* cmdObj) {
+
+    if (modelType == ModelType::TEMPLATE_MODEL) {
+        buildGeometry();
+    }
+    else if (modelType == ModelType::ASSIMP_MODEL) {
+        buildGeometryAssimp();
+    }
+    else if (modelType == ModelType::QUAD_MODEL) {
+        buildQuadGeometry();
+    }
+    createBuffers(device);
+    uploadBuffers(device, cmdObj);
 }
 
-std::vector<uint32_t> Model::getIndices()
-{
-    return indices;
+float Model::getObj2VoxelScale() {
+    return Obj2VoxelScale;
 }
 
-const d3dUtil::Bound& Model::getBounds() const
-{
-    return mBounds;
+void Model::setObj2VoxelScale(float _scale) {
+    Obj2VoxelScale = _scale;
 }
 
-void Model::AppendAssimpMesh(const aiScene* aiscene, aiMesh* aimesh)
-{
+void Model::buildGeometryAssimp() {
+
+    const UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
+    const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
+
+
+    ThrowIfFailed(D3DCreateBlob(vbByteSize, VertexBufferCPU.GetAddressOf()));
+    CopyMemory(VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
+    ThrowIfFailed(D3DCreateBlob(ibByteSize, IndexBufferCPU.GetAddressOf()));
+    CopyMemory(IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
+
+    VertexBufferByteSize = vbByteSize;
+    VertexByteStride = sizeof(Vertex);
+    IndexFormat = DXGI_FORMAT_R16_UINT;
+    IndexBufferByteSize = ibByteSize;
+
+}
+
+void Model::appendAssimpMesh(const aiScene* aiscene, aiMesh* aimesh) {
+
     UINT curVertexOffset = vertices.size();
     UINT curIndexOffset = indices.size();
     UINT curIndexCount = 0;
@@ -191,8 +180,48 @@ void Model::AppendAssimpMesh(const aiScene* aiscene, aiMesh* aimesh)
     globalMeshID++;
 }
 
-void Model::buildGeometry()
+const d3dUtil::Bound& Model::getBounds() const
 {
+    return mBounds;
+}
+
+void Model::buildQuadGeometry() {
+    Geometry mGeo;
+    Geometry::MeshData quad = mGeo.CreateQuad(0.0f, 0.0f, 1.0f, 1.0f, 0.0f);
+    Mesh quadSubMesh;
+    quadSubMesh.IndexCount = (UINT)quad.Indices32.size();
+    quadSubMesh.StartIndexLocation = 0;
+    quadSubMesh.BaseVertexLocation = 0;
+    quadSubMesh.materialName = "mat1";
+    DrawArgs["quad"] = quadSubMesh;
+
+    auto totalVertCount = quad.Vertices.size();
+    vertices.resize(totalVertCount);
+
+    UINT k = 0;
+    for (size_t i = 0; i < quad.Vertices.size(); ++i, ++k) {
+        vertices[k].Pos = quad.Vertices[i].Position;
+        vertices[k].Normal = quad.Vertices[i].Normal;
+        vertices[k].TexC = quad.Vertices[i].TexC;
+    }
+
+    indices.insert(indices.end(), std::begin(quad.GetIndices16()), std::end(quad.GetIndices16()));
+    const UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
+    const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
+
+    ThrowIfFailed(D3DCreateBlob(vbByteSize, VertexBufferCPU.GetAddressOf()));
+    CopyMemory(VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
+    ThrowIfFailed(D3DCreateBlob(ibByteSize, IndexBufferCPU.GetAddressOf()));
+    CopyMemory(IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
+
+    VertexBufferByteSize = vbByteSize;
+    VertexByteStride = sizeof(Vertex);
+    IndexFormat = DXGI_FORMAT_R16_UINT;
+    IndexBufferByteSize = ibByteSize;
+}
+
+
+void Model::buildGeometry() {
     Geometry mGeo;
     Geometry::MeshData box = mGeo.CreateBox(2.f, 2.f, 2.f, 3);
     Geometry::MeshData sphere = mGeo.CreateSphere(1.5f, 20, 20);
@@ -249,57 +278,6 @@ void Model::buildGeometry()
     VertexByteStride = sizeof(Vertex);
     IndexFormat = DXGI_FORMAT_R16_UINT;
     IndexBufferByteSize = ibByteSize;
-}
-
-void Model::buildQuadGeometry()
-{
-    Geometry mGeo;
-    Geometry::MeshData quad = mGeo.CreateQuad(0.0f, 0.0f, 1.0f, 1.0f, 0.0f);
-    Mesh quadSubMesh;
-    quadSubMesh.IndexCount = (UINT)quad.Indices32.size();
-    quadSubMesh.StartIndexLocation = 0;
-    quadSubMesh.BaseVertexLocation = 0;
-    quadSubMesh.materialName = "mat1";
-    DrawArgs["quad"] = quadSubMesh;
-
-    auto totalVertCount = quad.Vertices.size();
-    vertices.resize(totalVertCount);
-
-    UINT k = 0;
-    for (size_t i = 0; i < quad.Vertices.size(); ++i, ++k) {
-        vertices[k].Pos = quad.Vertices[i].Position;
-        vertices[k].Normal = quad.Vertices[i].Normal;
-        vertices[k].TexC = quad.Vertices[i].TexC;
-    }
-
-    indices.insert(indices.end(), std::begin(quad.GetIndices16()), std::end(quad.GetIndices16()));
-    const UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
-    const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
-
-    ThrowIfFailed(D3DCreateBlob(vbByteSize, VertexBufferCPU.GetAddressOf()));
-    CopyMemory(VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
-    ThrowIfFailed(D3DCreateBlob(ibByteSize, IndexBufferCPU.GetAddressOf()));
-    CopyMemory(IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
-
-    VertexBufferByteSize = vbByteSize;
-    VertexByteStride = sizeof(Vertex);
-    IndexFormat = DXGI_FORMAT_R16_UINT;
-    IndexBufferByteSize = ibByteSize;
-}
-
-void Model::buildGeometryAssimp()
-{
-    const UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
-    const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
 
 
-    ThrowIfFailed(D3DCreateBlob(vbByteSize, VertexBufferCPU.GetAddressOf()));
-    CopyMemory(VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
-    ThrowIfFailed(D3DCreateBlob(ibByteSize, IndexBufferCPU.GetAddressOf()));
-    CopyMemory(IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
-
-    VertexBufferByteSize = vbByteSize;
-    VertexByteStride = sizeof(Vertex);
-    IndexFormat = DXGI_FORMAT_R16_UINT;
-    IndexBufferByteSize = ibByteSize;
 }

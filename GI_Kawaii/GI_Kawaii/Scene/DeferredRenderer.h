@@ -5,6 +5,7 @@ enum class GBUFFER_TYPE : int { POSITION = 0, ALBEDO, NORMAL, COUNT };
 class GBuffer
 {
 public:
+
 	GBuffer(ID3D12Device* _device, UINT _w, UINT _h, GBUFFER_TYPE _t);
 
 	GBuffer(const GBuffer& rhs) = delete;
@@ -27,10 +28,12 @@ public:
 	void OnResize(UINT newWidth, UINT newHeight);
 
 private:
+
 	void BuildDescriptors();
 	void BuildResources();
 
 private:
+
 	ID3D12Device* device;
 	GBUFFER_TYPE Type;
 	UINT mWidth = 0;
@@ -48,12 +51,12 @@ public:
 	DeferredRenderer();
 	DeferredRenderer(ID3D12Device* device, UINT width, UINT height);
 
+	void InitDeferredRenderer();
+	void OnResize(UINT newWidth, UINT newHeight);
+
 	DeferredRenderer(const DeferredRenderer& rhs) = delete;
 	DeferredRenderer& operator=(const DeferredRenderer& rhs) = delete;
 	~DeferredRenderer() = default;
-
-	void InitDeferredRenderer();
-	void OnResize(UINT newWidth, UINT newHeight);
 
 	GBuffer* getGBuffer(GBUFFER_TYPE _type);
 	std::unordered_map<GBUFFER_TYPE, std::unique_ptr<GBuffer>>& getGbuffersMap();
@@ -63,6 +66,7 @@ public:
 	D3D12_RECT ScissorRect()const;
 
 private:
+
 	ID3D12Device* md3dDevice = nullptr;
 
 	D3D12_VIEWPORT mViewPort;
@@ -72,4 +76,5 @@ private:
 	UINT mHeight = 0;
 
 	std::unordered_map<GBUFFER_TYPE, std::unique_ptr<GBuffer>> mGBuffers;
+
 };

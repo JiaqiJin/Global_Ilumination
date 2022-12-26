@@ -2,50 +2,24 @@
 #include "Texture.h"
 #include <iostream>
 
-Texture::Texture()
-{
+Texture::Texture() : textureID(-1) {}
+
+Texture::Texture(const std::wstring& filename) 
+	: Filename(filename), textureID(-1) {
 
 }
 
-Texture::Texture(const std::wstring& filename)
-	: Filename(filename), textureID(-1)
-{
 
-}
-
-Texture::Texture(const std::wstring& filename, UINT64 _textureID)
+Texture::Texture(const std::wstring& filename, UINT64 _textureID) 
 	: Filename(filename), textureID(_textureID)
 {
 
 }
 
-Texture::~Texture()
-{
-	cleanUpImageByte();
-}
-
-bool Texture::InitializeTextureBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList)
-{
-	if (!(CreateTextureBuffer(device)))
-	{
-		std::cout << "default heap creation for texture failed for : ";
-		std::wcout << Filename << std::endl;
-		return false;
-	}
-	if (!(UploadTexture(device, cmdList)))
-	{
-		std::cout << "texture upload failed for : ";
-		std::wcout << Filename << std::endl;
-		return false;
-	}
-	return true;
-}
-
-bool Texture::CreateTextureBuffer(ID3D12Device* device)
+bool Texture::createTextureBuffer(ID3D12Device* device) 
 {
 	int imageSize = LoadImageDataFromFile(&imageData, textureDESC, Filename.c_str(), imageBytesPerRow);
-	if (imageSize <= 0) 
-		return false;
+	if (imageSize <= 0) return false;
 
 	ThrowIfFailed(device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
@@ -53,48 +27,39 @@ bool Texture::CreateTextureBuffer(ID3D12Device* device)
 		&textureDESC,
 		D3D12_RESOURCE_STATE_COPY_DEST,
 		nullptr,
-		IID_PPV_ARGS(mTextureBuffer.GetAddressOf())));
+		IID_PPV_ARGS(textureBuffer.GetAddressOf())));
 
-	mTextureBuffer->SetName(Filename.c_str());
+	textureBuffer->SetName(Filename.c_str());
 	return true;
+
 }
 
-bool Texture::UploadTexture(ID3D12Device* device, ID3D12GraphicsCommandList* cmdObj)
-{
+bool Texture::uploadTexture(ID3D12Device* device, DX12_CommandContext* cmdObj) {
+
+
+
 	UINT64 textureUploadBufferSize;
-	// this function gets the size an upload buffer needs to be to upload a texture to the gpu.
-	// each row must be 256 byte aligned except for the last row, which can just be the size in bytes of the row
-	// eg. textureUploadBufferSize = ((((width * numBytesPerPixel) + 255) & ~255) * (height - 1)) + (width * numBytesPerPixel);
-	//textureUploadBufferSize = (((imageBytesPerRow + 255) & ~255) * (textureDesc.Height - 1)) + imageBytesPerRow;
 	device->GetCopyableFootprints(&textureDESC, 0, 1, 0, nullptr, nullptr, nullptr, &textureUploadBufferSize);
 
-	// now we create an upload heap to upload our texture to the GPU
-	HRESULT hr = device->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD), // upload heap
-		D3D12_HEAP_FLAG_NONE, // no flags
-		&CD3DX12_RESOURCE_DESC::Buffer(textureUploadBufferSize), // resource description for a buffer (storing the image data in this heap just to copy to the default heap)
-		D3D12_RESOURCE_STATE_GENERIC_READ, // We will copy the contents from this heap to the default heap above
+	// upload buffer
+	ThrowIfFailed(device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+		D3D12_HEAP_FLAG_NONE,
+		&CD3DX12_RESOURCE_DESC::Buffer(textureUploadBufferSize),
+		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
-		IID_PPV_ARGS(mUploadHeap.GetAddressOf()));
-	if (FAILED(hr))
-	{
-		return false;
-	}
-	mUploadHeap->SetName(L"Texture Buffer Upload Resource Heap");
+		IID_PPV_ARGS(UploadHeap.GetAddressOf())));
+	UploadHeap->SetName(L"texture upload buffer");
 
 	// img data --- > upload heap
-	D3D12_SUBRESOURCE_DATA textureData;
+	D3D12_SUBRESOURCE_DATA textureData = {};
 	textureData.pData = imageData;
-	textureData.RowPitch = imageBytesPerRow; // size of all our triangle vertex data
+	textureData.RowPitch = imageBytesPerRow;
 	textureData.SlicePitch = static_cast<LONG_PTR>(imageBytesPerRow) * static_cast<LONG_PTR>(textureDESC.Height);
 
-	// Now we copy the upload buffer contents to the default heap
-	UpdateSubresources(cmdObj, mTextureBuffer.Get(), mUploadHeap.Get(), 0, 0, 1, &textureData);
+	UpdateSubresources(cmdObj->getCommandListPtr(), textureBuffer.Get(), UploadHeap.Get(), 0, 0, 1, &textureData);
 
-	// transition the texture default heap to a pixel shader resource 
-	// (we will be sampling from this heap in the pixel shader to get the color of pixels)
-	cmdObj->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mTextureBuffer.Get(), 
-		D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+	cmdObj->getCommandListPtr()->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(textureBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
 
 	SRVDESC.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	SRVDESC.Format = textureDESC.Format;
@@ -103,12 +68,31 @@ bool Texture::UploadTexture(ID3D12Device* device, ID3D12GraphicsCommandList* cmd
 	SRVDESC.Texture2D.MipLevels = textureDESC.MipLevels;
 	SRVDESC.Texture2D.ResourceMinLODClamp = 0.0f;
 
+
 }
 
-int Texture::LoadImageDataFromFile(BYTE** imageData,
-	D3D12_RESOURCE_DESC& resourceDescription,
-	LPCWSTR filename,
-	int& bytesPerRow)
+ID3D12Resource* Texture::getTextureBuffer() {
+	return textureBuffer.Get();
+}
+
+D3D12_SHADER_RESOURCE_VIEW_DESC Texture::getSRVDESC() {
+	return SRVDESC;
+}
+
+bool Texture::InitializeTextureBuffer(ID3D12Device* device, DX12_CommandContext* cmdObj)
+{
+	if (!(createTextureBuffer(device))) {
+		std::cout << "default heap creation for texture failed" << std::endl;
+		return false;
+	}
+	if (!(uploadTexture(device, cmdObj))) {
+		std::cout << "texture upload failed" << std::endl;
+		return false;
+	}
+	return true;
+}
+
+int Texture::LoadImageDataFromFile(BYTE** imageData, D3D12_RESOURCE_DESC& resourceDescription, LPCWSTR filename, int& bytesPerRow)
 {
 	HRESULT hr;
 
@@ -328,10 +312,14 @@ int Texture::GetDXGIFormatBitsPerPixel(DXGI_FORMAT& dxgiFormat)
 	return -1;
 }
 
-void Texture::cleanUpImageByte()
-{
-	if (imageData != nullptr) 
-	{
+void Texture::cleanUpImageByte() {
+
+	if (imageData != nullptr) {
 		delete imageData;
+
 	}
+}
+
+Texture::~Texture() {
+	cleanUpImageByte();
 }

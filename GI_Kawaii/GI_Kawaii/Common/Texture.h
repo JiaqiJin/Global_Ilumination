@@ -4,25 +4,29 @@
 
 #include <wincodec.h>
 
-class Texture
-{
+#include "../RHI/DX12/DX12_CommandContext.h"
+
+class Texture {
 public:
+
     Texture();
     Texture(const std::wstring& filename);
     Texture(const std::wstring& filename, UINT64 _textureID);
-    ~Texture();
+
     Texture(const Texture& rhs) = delete;
     Texture& operator=(const Texture& rhs) = delete;
 
+    virtual bool InitializeTextureBuffer(ID3D12Device* device, DX12_CommandContext* cmdObj);
 
-    bool InitializeTextureBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
+    ID3D12Resource* getTextureBuffer();
+    D3D12_SHADER_RESOURCE_VIEW_DESC getSRVDESC();
 
-    ID3D12Resource* getTextureBuffer() { return mTextureBuffer.Get(); }
-    D3D12_SHADER_RESOURCE_VIEW_DESC getSRVDESC() { return SRVDESC; }
+    virtual ~Texture();
 
 private:
-    bool CreateTextureBuffer(ID3D12Device* device);
-    bool UploadTexture(ID3D12Device* device, ID3D12GraphicsCommandList* cmdObj);
+
+    virtual bool createTextureBuffer(ID3D12Device* device);
+    virtual bool uploadTexture(ID3D12Device* device, DX12_CommandContext* cmdObj);
 
     int LoadImageDataFromFile(BYTE** imageData,
         D3D12_RESOURCE_DESC& resourceDescription,
@@ -34,14 +38,16 @@ private:
     WICPixelFormatGUID GetConvertToWICFormat(WICPixelFormatGUID& wicFormatGUID);
 
     void cleanUpImageByte();
+
 public:
+
     INT64 textureID;
 
     std::string Name;
     std::wstring Filename;
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> mTextureBuffer = nullptr;
-    Microsoft::WRL::ComPtr<ID3D12Resource> mUploadHeap = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> textureBuffer = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> UploadHeap = nullptr;
     D3D12_RESOURCE_DESC textureDESC;
     D3D12_SHADER_RESOURCE_VIEW_DESC SRVDESC;
     int imageBytesPerRow;

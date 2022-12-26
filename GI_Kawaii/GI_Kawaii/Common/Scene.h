@@ -4,10 +4,10 @@
 #include "Camera.h"
 #include "FrameResource.h"
 #include "Texture.h"
+#include "Material.h"
 #include "../RHI/DX12/DX12_CommandContext.h"
 
-enum class RenderLayer : int
-{
+enum class RenderLayer : int {
 	Default = 0,
 	Debug,
 	Gbuffer,
@@ -15,9 +15,9 @@ enum class RenderLayer : int
 	Count
 };
 
-
 struct MeshInfo
 {
+
 	MeshInfo() = default;
 
 	DirectX::XMFLOAT4X4 World = MathUtils::Identity4x4();
@@ -29,10 +29,13 @@ struct MeshInfo
 	UINT IndexCount = 0;
 	UINT StartIndexLocation = 0;
 	int BaseVertexLocation = 0;
+
+
 };
 
 struct ObjectInfo
 {
+
 	ObjectInfo() = default;
 
 	DirectX::XMFLOAT4X4 World = MathUtils::Identity4x4();
@@ -44,26 +47,27 @@ struct ObjectInfo
 
 	int NumFramesDirty = d3dUtil::gNumFrameResources;
 
-	std::vector<std::unique_ptr<MeshInfo>> mMeshInfos;
-
 	UINT ObjCBIndex = -1;
+
+	std::vector<std::unique_ptr<MeshInfo>> mMeshInfos;
 
 	d3dUtil::Bound mBound;
 
 	float Obj2VoxelScale;
 };
 
-class Scene
+class Scene 
 {
 public:
+
 	Scene();
-	Scene(ID3D12Device* _device, ID3D12GraphicsCommandList* cmdList, UINT _mClientWidth, UINT _mClientHeight);
+	Scene(ID3D12Device* _device, UINT _mClientWidth, UINT _mClientHeight);
 
 	Scene(const Scene& rhs) = delete;
 	Scene& operator=(const Scene& rhs) = delete;
 
-	void InitScene();
-	void Resize(const int width, const int height);
+	void initScene();
+	void resize(const int& _w, const int& _h);
 
 	std::unordered_map<std::string, std::unique_ptr<Material>>& getMaterialMap();
 	std::unordered_map<std::string, std::unique_ptr<Texture>>& getTexturesMap();
@@ -71,31 +75,37 @@ public:
 	std::unordered_map<std::string, std::unique_ptr<Camera>>& getCamerasMap();
 	std::vector<std::unique_ptr<ObjectInfo>>& getObjectInfos();
 	const std::vector<std::vector<ObjectInfo*>>& getObjectInfoLayer();
-private:
-	void LoadMaterials();
-	void LoadTextures();
-	void LoadModels();
-	void PopulateMeshInfos();
-	void BuildCameras();
 
-	void LoadAssetFromAssimp(const std::string filepath);
-	void ProcessNode(aiNode* ainode, const aiScene* aiscene, Model* assimpModel);
 private:
 
-	ID3D12Device* md3dDevice;
-	ID3D12GraphicsCommandList* cmdList;
+	void buildMaterials();
+	void loadTextures();
+	void loadModels();
+	void populateMeshInfos();
+	void buildCameras();
+
+
+	void loadAssetFromAssimp(const std::string filepath);
+	void processNode(aiNode* ainode, const aiScene* aiscene, Model* assimpModel);
+
+
+
+private:
+
 	UINT mClientWidth, mClientHeight;
 
-	std::unordered_map<std::string, std::unique_ptr<Model>> mModels;
-	std::unordered_map<std::string, std::unique_ptr<Texture>> mTextures;
 	std::unordered_map<std::string, std::unique_ptr<Material>> mMaterials;
+	std::unordered_map<std::string, std::unique_ptr<Texture> >mTextures;
+	std::unordered_map<std::string, std::unique_ptr<Model>>	mModels;
 	std::unordered_map<std::string, std::unique_ptr<Camera>> mCameras;
 
 	std::vector<std::unique_ptr<ObjectInfo>> mObjectInfos;
-	std::vector<std::vector<ObjectInfo*>> mObjectInfoLayer;
-
-	std::shared_ptr<DX12_CommandContext> cpyCommandContext;
+	std::vector<std::vector<ObjectInfo*>> mObjectInfoLayer; // a vector of objinfo ptr vectors
 
 	UINT globalTextureSRVDescriptorHeapIndex = 0;
 	UINT globalMatCBindex = 0;
+
+
+	std::shared_ptr<DX12_CommandContext> cpyCommandObject;
+	ID3D12Device* md3dDevice;
 };

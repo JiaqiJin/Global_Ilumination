@@ -11,11 +11,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE prevInstance,
 
     try
     {
-        Application App(hInstance);
-        if (!App.Initialize())
+        App LocalApp(hInstance);
+        if (!LocalApp.Initialize())
             return 0;
 
-        return App.Run();
+        return LocalApp.Run();
     }
     catch (DxException& e)
     {

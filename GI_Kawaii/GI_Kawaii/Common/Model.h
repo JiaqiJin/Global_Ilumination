@@ -6,13 +6,19 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
+#include "../RHI/DX12/DX12_CommandContext.h"
+
+#include "Geometry.h"
+#include "Material.h"
+
 enum ModelType { TEMPLATE_MODEL = 0, ASSIMP_MODEL = 1, QUAD_MODEL = 2 };
 
 // Defines a subrange of geometry in a MeshGeometry.  This is for when multiple
 // geometries are stored in one vertex and index buffer.  It provides the offsets
 // and data needed to draw a subset of geometry stores in the vertex and index 
 // buffers so that we can implement the technique described by Figure 6.3.
-struct Mesh {
+struct Mesh
+{
 
 	std::string materialName;
 
@@ -23,40 +29,44 @@ struct Mesh {
 	d3dUtil::Bound Bounds;
 };
 
-class Model
+
+class Model 
 {
 public:
+
 	Model();
-	Model(ModelType _type, std::string _matName = "");
+	Model(ModelType _type);
 
 	Model(const Model& rhs) = delete;
 	Model& operator=(const Model& rhs) = delete;
 
-	void InitModel(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
+	void createBuffers(ID3D12Device* device);
+	void uploadBuffers(ID3D12Device* device, DX12_CommandContext* cmdObj);
 
-	void CreateBuffers(ID3D12Device* device);
-	void UploadBuffers(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
+	void InitModel(ID3D12Device* device, DX12_CommandContext* cmdObj);
 
 	D3D12_VERTEX_BUFFER_VIEW getVertexBufferView() const;
 	D3D12_INDEX_BUFFER_VIEW getIndexBufferView() const;
 	std::unordered_map<std::string, Mesh>& getDrawArgs();
-	std::vector<Vertex> getVertices();
-	std::vector<uint32_t> getIndices();
 
-	void SetWorldMatrix(const DirectX::XMFLOAT4X4& mat);
-	DirectX::XMFLOAT4X4& GetWorldMatrix();
+	void setWorldMatrix(const DirectX::XMFLOAT4X4& mat);
+	DirectX::XMFLOAT4X4& getWorldMatrix();
 	float getObj2VoxelScale();
 	void setObj2VoxelScale(float _scale);
+
+	void appendAssimpMesh(const aiScene* aiscene, aiMesh* aimesh);
+
 	const d3dUtil::Bound& getBounds() const;
 
-	void AppendAssimpMesh(const aiScene* aiscene, aiMesh* aimesh);
-
 protected:
+
 	void buildGeometry();
 	void buildQuadGeometry();
 	void buildGeometryAssimp();
+
 public:
 	std::string Name;
+
 	ModelType modelType;
 
 	// A MeshGeometry may store multiple geometries in one vertex/index buffer.
@@ -65,18 +75,18 @@ public:
 	std::unordered_map<std::string, Mesh> DrawArgs;
 
 protected:
+
 	UINT globalMeshID;
 
 	std::vector<Vertex> vertices;
-	std::vector<uint32_t> indices; // specifically for large meshes whoes index size > 65535
+	std::vector<std::uint16_t> indices;
 
 	DirectX::XMFLOAT4X4 World = MathUtils::Identity4x4();
 	DirectX::XMFLOAT4X4 texTransform = MathUtils::Identity4x4();
+	float Obj2VoxelScale = 1.0f;
 
 	D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
 	D3D12_INDEX_BUFFER_VIEW indexBufferView;
-
-	float Obj2VoxelScale = 1.0f;
 
 	// System memory copies.  Use Blobs because the vertex/index format can be generic.
 	// It is up to the client to cast appropriately.  
@@ -96,4 +106,5 @@ protected:
 	UINT IndexBufferByteSize = 0;
 
 	d3dUtil::Bound mBounds;
+
 };

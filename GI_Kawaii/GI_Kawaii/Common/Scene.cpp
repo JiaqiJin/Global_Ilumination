@@ -6,68 +6,45 @@ Scene::Scene()
     mObjectInfoLayer.resize((int)RenderLayer::Count);
 }
 
-Scene::Scene(ID3D12Device* _device, ID3D12GraphicsCommandList* _cmdList, UINT _mClientWidth, UINT _mClientHeight)
-	: md3dDevice(_device), cmdList(_cmdList), mClientWidth(_mClientWidth), mClientHeight(_mClientHeight)
-{
+
+Scene::Scene(ID3D12Device* _device, UINT _mClientWidth, UINT _mClientHeight) : md3dDevice(_device), mClientWidth(_mClientWidth), mClientHeight(_mClientHeight) {
     mObjectInfoLayer.resize((int)RenderLayer::Count);
-    cpyCommandContext = std::make_shared<DX12_CommandContext>(md3dDevice);
+    cpyCommandObject = std::make_shared<DX12_CommandContext>(md3dDevice);
 }
 
-void Scene::InitScene()
-{
-    cpyCommandContext->FlushCommandQueue();
-    cpyCommandContext->ResetCommandList();
-
-    BuildCameras();
-	LoadModels();
-    LoadMaterials();
-    LoadTextures();
-    LoadAssetFromAssimp("Assets/Models/sponza/sponza.obj");
-
-    cpyCommandContext->EndCommandRecording();
-    cpyCommandContext->FlushCommandQueue();
-
-    PopulateMeshInfos();
+std::unordered_map<std::string, std::unique_ptr<Material>>& Scene::getMaterialMap() {
+    return mMaterials;
 }
 
-void Scene::LoadMaterials()
-{
-    auto mat1 = std::make_unique<Material>();
-    mat1->Name = "mat1";
-    mat1->MatCBIndex = globalMatCBindex++;
-    mat1->DiffuseAlbedo = DirectX::XMFLOAT4(0.2f, 0.6f, 0.6f, 1.0f);
-    mat1->FresnelR0 = DirectX::XMFLOAT3(0.01f, 0.01f, 0.01f);
-    mat1->Roughness = 0.125f;
-    mat1->DiffuseSrvHeapIndex = 0;
-    mat1->NormalSrvHeapIndex = 0;
-
-    auto mat2 = std::make_unique<Material>();
-    mat2->Name = "mat2";
-    mat2->MatCBIndex = globalMatCBindex++;
-    mat2->DiffuseAlbedo = DirectX::XMFLOAT4(0.0f, 0.2f, 0.6f, 1.0f);
-    mat2->FresnelR0 = DirectX::XMFLOAT3(0.1f, 0.1f, 0.1f);
-    mat2->Roughness = 0.0;
-    mat2->DiffuseSrvHeapIndex = 1;
-    mat2->NormalSrvHeapIndex = 0;
-
-    mMaterials["mat1"] = std::move(mat1);
-    mMaterials["mat2"] = std::move(mat2);
+std::unordered_map<std::string, std::unique_ptr<Texture>>& Scene::getTexturesMap() {
+    return mTextures;
 }
 
-void Scene::LoadTextures()
-{
-   
+std::unordered_map<std::string, std::unique_ptr<Model>>& Scene::getModelsMap() {
+    return mModels;
 }
 
-void Scene::PopulateMeshInfos()
-{
+std::unordered_map<std::string, std::unique_ptr<Camera>>& Scene::getCamerasMap() {
+    return mCameras;
+}
+
+
+std::vector<std::unique_ptr<ObjectInfo>>& Scene::getObjectInfos() {
+    return mObjectInfos;
+}
+
+const std::vector<std::vector<ObjectInfo*>>& Scene::getObjectInfoLayer() {
+    return mObjectInfoLayer;
+}
+
+void Scene::populateMeshInfos() {
+
     UINT curObjectIndex = 0;
-    for (auto& curModel : mModels)
-    {
+    for (auto& curModel : mModels) {
+
         auto curObjectInfo = std::make_unique<ObjectInfo>();
 
-        for (auto& curMesh : curModel.second->getDrawArgs())
-        {
+        for (auto& curMesh : curModel.second->getDrawArgs()) {
             auto curDrawArg = curMesh.second;
 
             auto curMeshInfo = std::make_unique<MeshInfo>();
@@ -82,7 +59,7 @@ void Scene::PopulateMeshInfos()
         curObjectInfo->Model = curModel.second.get();
         curObjectInfo->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
         curObjectInfo->ObjCBIndex = curObjectIndex;
-        curObjectInfo->World = curModel.second->GetWorldMatrix();
+        curObjectInfo->World = curModel.second->getWorldMatrix();
         curObjectInfo->mBound = curModel.second->getBounds();
         curObjectInfo->Obj2VoxelScale = curModel.second->getObj2VoxelScale();
         if (curModel.second->modelType == ModelType::QUAD_MODEL) {
@@ -98,35 +75,79 @@ void Scene::PopulateMeshInfos()
     }
 }
 
-void Scene::BuildCameras()
-{
-    auto playerCamera = std::make_unique<Camera>();
-    playerCamera->SetPosition(0.0f, 92.0f, -15.0f);
-    playerCamera->SetLens(0.25f * MathUtils::Pi, static_cast<float>(mClientWidth) / mClientHeight, 1.0f, 1000.0f);
-    mCameras["MainCam"] = std::move(playerCamera);
+void Scene::buildMaterials() {
+
+    auto mat1 = std::make_unique<Material>();
+    mat1->Name = "mat1";
+    mat1->MatCBIndex = globalMatCBindex++;
+    mat1->DiffuseAlbedo = DirectX::XMFLOAT4(0.2f, 0.6f, 0.6f, 1.0f);
+    mat1->FresnelR0 = DirectX::XMFLOAT3(0.01f, 0.01f, 0.01f);
+    mat1->Roughness = 0.125f;
+    mat1->DiffuseSrvHeapIndex = 0;
+    mat1->NormalSrvHeapIndex = 0;
+
+
+    auto mat2 = std::make_unique<Material>();
+    mat2->Name = "mat2";
+    mat2->MatCBIndex = globalMatCBindex++;
+    mat2->DiffuseAlbedo = DirectX::XMFLOAT4(0.0f, 0.2f, 0.6f, 1.0f);
+    mat2->FresnelR0 = DirectX::XMFLOAT3(0.1f, 0.1f, 0.1f);
+    mat2->Roughness = 0.0;
+    mat2->DiffuseSrvHeapIndex = 1;
+    mat2->NormalSrvHeapIndex = 0;
+
+    mMaterials["mat1"] = std::move(mat1);
+    mMaterials["mat2"] = std::move(mat2);
+
 }
 
-void Scene::LoadModels()
+void Scene::loadTextures() 
 {
+    auto mytex1 = std::make_unique<Texture>(L"Assets/Textures/ss.png", 0);
+    mytex1->Name = "tex1";
+    mytex1->InitializeTextureBuffer(md3dDevice, cpyCommandObject.get());
+    globalTextureSRVDescriptorHeapIndex++;
+
+    auto mytex2 = std::make_unique <Texture>(L"Assets/Textures/ss.png", 1);
+    mytex2->Name = "tex2";
+    mytex2->InitializeTextureBuffer(md3dDevice, cpyCommandObject.get());
+    globalTextureSRVDescriptorHeapIndex++;
+
+    mTextures[mytex1->Name] = std::move(mytex1);
+    mTextures[mytex2->Name] = std::move(mytex2);
+}
+
+void Scene::buildCameras() {
+
+    auto normalCam = std::make_unique<Camera>();
+    normalCam->SetPosition(0.0f, 92.0f, -15.0f);
+    normalCam->SetLens(0.25f * MathUtils::Pi, static_cast<float>(mClientWidth) / mClientHeight, 1.0f, 1000.0f);
+    mCameras["MainCam"] = std::move(normalCam);
+}
+
+void Scene::loadModels() {
+
     auto mymodel1 = std::make_unique<Model>(ModelType::TEMPLATE_MODEL);
     mymodel1->Name = "model1";
-    mymodel1->InitModel(md3dDevice, cmdList);
+    mymodel1->InitModel(md3dDevice, cpyCommandObject.get());
     mymodel1->setObj2VoxelScale(200.0f);
     mModels["model1"] = std::move(mymodel1);
 
     auto myquad = std::make_unique<Model>(ModelType::QUAD_MODEL);
     myquad->Name = "quad";
-    myquad->InitModel(md3dDevice, cmdList);
+    myquad->InitModel(md3dDevice, cpyCommandObject.get());
     mModels["quad"] = std::move(myquad);
+
 }
 
-void Scene::LoadAssetFromAssimp(const std::string filepath)
+void Scene::loadAssetFromAssimp(const std::string filepath) 
 {
+
     auto assimpModel = std::make_unique<Model>(ModelType::ASSIMP_MODEL);
 
     DirectX::XMFLOAT4X4 worldMat = MathUtils::Identity4x4();// the sponza model is stupidly big, I'm not happy bout dat
     DirectX::XMStoreFloat4x4(&worldMat, DirectX::XMMatrixScaling(0.1f, 0.1f, 0.1f) * DirectX::XMMatrixTranslation(0.0f, 0.0f, 0.0f));
-    assimpModel->SetWorldMatrix(worldMat);
+    assimpModel->setWorldMatrix(worldMat);
     assimpModel->setObj2VoxelScale(200.0f);
 
     //==============================================
@@ -146,10 +167,10 @@ void Scene::LoadAssetFromAssimp(const std::string filepath)
     // mesh appending (CPU)
     //===========================================
 
-    ProcessNode(aiscene->mRootNode, aiscene, assimpModel.get());
+    processNode(aiscene->mRootNode, aiscene, assimpModel.get());
 
     assimpModel->Name = filepath.substr(filepath.find_last_of('/') + 1);
-    assimpModel->InitModel(md3dDevice, cmdList);
+    assimpModel->InitModel(md3dDevice, cpyCommandObject.get());
     mModels[assimpModel->Name] = std::move(assimpModel);
 
     //=============================================
@@ -174,7 +195,7 @@ void Scene::LoadAssetFromAssimp(const std::string filepath)
             curtex->Name = completeTexturePath.substr(completeTexturePath.find_last_of('\\') + 1);
             srvDiffID = curtex->textureID;
             if (mTextures.find(curtex->Name) == mTextures.end()) {
-                curtex->InitializeTextureBuffer(md3dDevice, cmdList);
+                curtex->InitializeTextureBuffer(md3dDevice, cpyCommandObject.get());
                 globalTextureSRVDescriptorHeapIndex++;
                 mTextures[curtex->Name] = std::move(curtex);
             }
@@ -195,7 +216,7 @@ void Scene::LoadAssetFromAssimp(const std::string filepath)
             curtex->Name = completeTexturePath.substr(completeTexturePath.find_last_of('\\') + 1);
             srvNormID = curtex->textureID;
             if (mTextures.find(curtex->Name) == mTextures.end()) {
-                curtex->InitializeTextureBuffer(md3dDevice, cmdList);
+                curtex->InitializeTextureBuffer(md3dDevice, cpyCommandObject.get());
                 globalTextureSRVDescriptorHeapIndex++;
                 mTextures[curtex->Name] = std::move(curtex);
             }
@@ -219,55 +240,42 @@ void Scene::LoadAssetFromAssimp(const std::string filepath)
     }
 }
 
-void Scene::ProcessNode(aiNode* ainode, const aiScene* aiscene, Model* assimpModel)
-{
-	for (unsigned int i = 0; i < ainode->mNumMeshes; ++i) 
-	{
+void Scene::processNode(aiNode* ainode, const aiScene* aiscene, Model* assimpModel) {
 
-		aiMesh* aimesh = aiscene->mMeshes[ainode->mMeshes[i]];
+    for (unsigned int i = 0; i < ainode->mNumMeshes; ++i) {
 
-		assimpModel->AppendAssimpMesh(aiscene, aimesh);
-	}
+        aiMesh* aimesh = aiscene->mMeshes[ainode->mMeshes[i]];
 
-	for (unsigned int i = 0; i < ainode->mNumChildren; ++i)
-	{
-		ProcessNode(ainode->mChildren[i], aiscene, assimpModel);
-	}
+        assimpModel->appendAssimpMesh(aiscene, aimesh);
+
+    }
+    for (unsigned int i = 0; i < ainode->mNumChildren; ++i) {
+        processNode(ainode->mChildren[i], aiscene, assimpModel);
+    }
 }
 
-void Scene::Resize(const int width, const int height)
-{
-	mClientWidth = width;
-	mClientHeight = height;
-	mCameras["MainCam"]->SetLens(0.25f * MathUtils::Pi, static_cast<float>(mClientWidth) / mClientHeight, 1.0f, 1000.0f);
+void Scene::initScene() {
+
+
+
+    cpyCommandObject->FlushCommandQueue();
+    cpyCommandObject->ResetCommandList();
+
+    buildCameras();
+    loadModels();
+    buildMaterials();
+    loadTextures();
+    loadAssetFromAssimp("Assets/Models/sponza/sponza.obj");
+
+    cpyCommandObject->EndCommandRecording();
+    cpyCommandObject->FlushCommandQueue();
+
+    populateMeshInfos();
+
 }
 
-std::unordered_map<std::string, std::unique_ptr<Material>>& Scene::getMaterialMap()
-{
-	return mMaterials;
-}
-
-std::unordered_map<std::string, std::unique_ptr<Texture>>& Scene::getTexturesMap()
-{
-	return mTextures;
-}
-
-std::unordered_map<std::string, std::unique_ptr<Model>>& Scene::getModelsMap()
-{
-	return mModels;
-}
-
-std::unordered_map<std::string, std::unique_ptr<Camera>>& Scene::getCamerasMap()
-{
-	return mCameras;
-}
-
-std::vector<std::unique_ptr<ObjectInfo>>& Scene::getObjectInfos()
-{
-	return mObjectInfos;
-}
-
-const std::vector<std::vector<ObjectInfo*>>& Scene::getObjectInfoLayer()
-{
-    return mObjectInfoLayer;
+void Scene::resize(const int& _w, const int& _h) {
+    mClientWidth = _w;
+    mClientHeight = _h;
+    mCameras["MainCam"]->SetLens(0.25f * MathUtils::Pi, static_cast<float>(mClientWidth) / mClientHeight, 1.0f, 1000.0f);
 }
