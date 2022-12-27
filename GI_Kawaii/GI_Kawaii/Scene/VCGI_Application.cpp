@@ -149,9 +149,6 @@ void App::UpdateMainPassCB(const Timer& gt)
     XMMATRIX invProj = DirectX::XMMatrixInverse(&DirectX::XMMatrixDeterminant(proj), proj);
     XMMATRIX invViewProj = DirectX::XMMatrixInverse(&DirectX::XMMatrixDeterminant(viewProj), viewProj);
     XMMATRIX shadowTransform = XMLoadFloat4x4(&mShadowMap->mShadowMapData.mShadowTransform);
-    XMMATRIX voxelView = XMLoadFloat4x4(&mMeshVoxelizer->getUniformData().mVoxelView);
-    XMMATRIX voxelProj = XMLoadFloat4x4(&mMeshVoxelizer->getUniformData().mVoxelProj);
-    XMMATRIX voxelViewProj = XMMatrixMultiply(voxelView, voxelProj);
 
     // use transpose to make sure we go from row - major on cpu to colume major on gpu
     DirectX::XMStoreFloat4x4(&mMainPassCB.View, DirectX::XMMatrixTranspose(view));
@@ -161,9 +158,6 @@ void App::UpdateMainPassCB(const Timer& gt)
     DirectX::XMStoreFloat4x4(&mMainPassCB.ViewProj, DirectX::XMMatrixTranspose(viewProj));
     DirectX::XMStoreFloat4x4(&mMainPassCB.InvViewProj, DirectX::XMMatrixTranspose(invViewProj));
     DirectX::XMStoreFloat4x4(&mMainPassCB.ShadowTransform, DirectX::XMMatrixTranspose(shadowTransform));
-    DirectX::XMStoreFloat4x4(&mMainPassCB.VoxelView, DirectX::XMMatrixTranspose(voxelView));
-    DirectX::XMStoreFloat4x4(&mMainPassCB.VoxelProj, DirectX::XMMatrixTranspose(voxelProj));
-    DirectX::XMStoreFloat4x4(&mMainPassCB.VoxelViewProj, DirectX::XMMatrixTranspose(voxelViewProj));
     mMainPassCB.EyePosW = mScene->getCamerasMap()["MainCam"]->GetPosition3f();
     mMainPassCB.LightPosW = mShadowMap->mShadowMapData.mLightPosW;
     mMainPassCB.RenderTargetSize = XMFLOAT2((float)mClientWidth, (float)mClientHeight);
@@ -283,8 +277,6 @@ void App::Draw(const Timer& gt)
     // Because we are on the GPU timeline, the new fence point won't be 
     // set until the GPU finishes processing all the commands prior to this Signal().
     mCommandQueue->Signal(mFence.Get(), mCurrentFence);
-
-
 }
 
 void App::OnMouseDown(WPARAM btnState, int x, int y){
@@ -437,25 +429,24 @@ void App::BuildRootSignature()
     texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
     CD3DX12_DESCRIPTOR_RANGE texTableShadow;
     texTableShadow.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
-    CD3DX12_DESCRIPTOR_RANGE gbufferTable;;
+    CD3DX12_DESCRIPTOR_RANGE gbufferTable;
     gbufferTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (int)GBUFFER_TYPE::COUNT, 2);
-  
+    CD3DX12_DESCRIPTOR_RANGE voxelTexTable;
+    voxelTexTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
     // Root parameter can be a table, root descriptor or root constants.
     CD3DX12_ROOT_PARAMETER slotRootParameter[d3dUtil::MAIN_PASS_UNIFORM::COUNT];
-
     // Perfomance TIP: Order from most frequent to least frequent.
     slotRootParameter[d3dUtil::MAIN_PASS_UNIFORM::DIFFUSE_TEX_TABLE].InitAsDescriptorTable(1, &texTable, D3D12_SHADER_VISIBILITY_PIXEL); // mesh textures
     slotRootParameter[d3dUtil::MAIN_PASS_UNIFORM::SHADOWMAP_TEX_TABLE].InitAsDescriptorTable(1, &texTableShadow, D3D12_SHADER_VISIBILITY_PIXEL); // shadow map
     slotRootParameter[d3dUtil::MAIN_PASS_UNIFORM::G_BUFFER].InitAsDescriptorTable(1, &gbufferTable, D3D12_SHADER_VISIBILITY_PIXEL);
+    slotRootParameter[d3dUtil::MAIN_PASS_UNIFORM::VOXEL].InitAsDescriptorTable(1, &voxelTexTable, D3D12_SHADER_VISIBILITY_ALL);
     slotRootParameter[d3dUtil::MAIN_PASS_UNIFORM::OBJ_CBV].InitAsConstantBufferView(0); // obj const buffer
     slotRootParameter[d3dUtil::MAIN_PASS_UNIFORM::MAINPASS_CBV].InitAsConstantBufferView(1); // pass const buffer
     slotRootParameter[d3dUtil::MAIN_PASS_UNIFORM::MATERIAL_CBV].InitAsConstantBufferView(2); // material const buffer
-
     auto staticSamplers = GetStaticSamplers();
     // A root signature is an array of root parameters.
     CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(d3dUtil::MAIN_PASS_UNIFORM::COUNT, slotRootParameter, (UINT)staticSamplers.size(), staticSamplers.data(),
         D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-
     ComPtr<ID3DBlob> serializedRootSig = nullptr;
     ComPtr<ID3DBlob> errorBlob = nullptr;
     HRESULT hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1,
@@ -470,7 +461,7 @@ void App::BuildRootSignature()
         0,
         serializedRootSig->GetBufferPointer(),
         serializedRootSig->GetBufferSize(),
-        IID_PPV_ARGS(&mRootSignatures["MainPass"])));
+        IID_PPV_ARGS(mRootSignatures["MainPass"].GetAddressOf())));
 }
 
 void App::BuildShadersAndInputLayout()

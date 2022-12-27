@@ -41,4 +41,3 @@ cbuffer cbPass : register(b1)
     float4x4 gVoxelProj;
     float4x4 gVoxelViewProj;
 };
-

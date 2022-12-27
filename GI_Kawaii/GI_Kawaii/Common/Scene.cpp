@@ -103,18 +103,7 @@ void Scene::buildMaterials() {
 
 void Scene::loadTextures() 
 {
-    auto mytex1 = std::make_unique<Texture>(L"Assets/Textures/ss.png", 0);
-    mytex1->Name = "tex1";
-    mytex1->InitializeTextureBuffer(md3dDevice, cpyCommandObject.get());
-    globalTextureSRVDescriptorHeapIndex++;
-
-    auto mytex2 = std::make_unique <Texture>(L"Assets/Textures/ss.png", 1);
-    mytex2->Name = "tex2";
-    mytex2->InitializeTextureBuffer(md3dDevice, cpyCommandObject.get());
-    globalTextureSRVDescriptorHeapIndex++;
-
-    mTextures[mytex1->Name] = std::move(mytex1);
-    mTextures[mytex2->Name] = std::move(mytex2);
+   
 }
 
 void Scene::buildCameras() {
