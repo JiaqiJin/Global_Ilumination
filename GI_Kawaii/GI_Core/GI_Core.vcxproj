@@ -148,8 +148,8 @@
   <ItemGroup>
     <ClCompile Include="Common\DDSTextureLoader.cpp" />
     <ClCompile Include="Common\DDSTextureLoader12.cpp" />
-    <ClCompile Include="Main.cpp" />
     <ClCompile Include="Common\Utils.cpp" />
+    <ClCompile Include="TextureLoading.cpp" />
     <ClCompile Include="Vendor\imgui\imgui.cpp" />
     <ClCompile Include="Vendor\imgui\imgui_demo.cpp" />
     <ClCompile Include="Vendor\imgui\imgui_draw.cpp" />
