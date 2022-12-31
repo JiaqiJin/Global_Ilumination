@@ -34,6 +34,9 @@ bool App::Initialize() {
     mDeferredRenderer = std::make_unique<DeferredRenderer>(md3dDevice.Get(), mClientWidth, mClientHeight);
     mDeferredRenderer->InitDeferredRenderer();
 
+    mMeshVoxelizer = std::make_unique<MeshVoxelizer>(md3dDevice.Get(), 256, 256, 256);
+    mMeshVoxelizer->Init3DVoxelTexture();
+
     BuildDescriptorHeaps();
     BuildRootSignature();
     BuildShadersAndInputLayout();
@@ -149,6 +152,9 @@ void App::UpdateMainPassCB(const Timer& gt)
     XMMATRIX invProj = DirectX::XMMatrixInverse(&DirectX::XMMatrixDeterminant(proj), proj);
     XMMATRIX invViewProj = DirectX::XMMatrixInverse(&DirectX::XMMatrixDeterminant(viewProj), viewProj);
     XMMATRIX shadowTransform = XMLoadFloat4x4(&mShadowMap->mShadowMapData.mShadowTransform);
+    XMMATRIX voxelView = XMLoadFloat4x4(&mMeshVoxelizer->getUniformData().mVoxelView);
+    XMMATRIX voxelProj = XMLoadFloat4x4(&mMeshVoxelizer->getUniformData().mVoxelProj);
+    XMMATRIX voxelViewProj = XMMatrixMultiply(voxelView, voxelProj);
 
     // use transpose to make sure we go from row - major on cpu to colume major on gpu
     DirectX::XMStoreFloat4x4(&mMainPassCB.View, DirectX::XMMatrixTranspose(view));
@@ -158,6 +164,9 @@ void App::UpdateMainPassCB(const Timer& gt)
     DirectX::XMStoreFloat4x4(&mMainPassCB.ViewProj, DirectX::XMMatrixTranspose(viewProj));
     DirectX::XMStoreFloat4x4(&mMainPassCB.InvViewProj, DirectX::XMMatrixTranspose(invViewProj));
     DirectX::XMStoreFloat4x4(&mMainPassCB.ShadowTransform, DirectX::XMMatrixTranspose(shadowTransform));
+    DirectX::XMStoreFloat4x4(&mMainPassCB.VoxelView, DirectX::XMMatrixTranspose(voxelView));
+    DirectX::XMStoreFloat4x4(&mMainPassCB.VoxelProj, DirectX::XMMatrixTranspose(voxelProj));
+    DirectX::XMStoreFloat4x4(&mMainPassCB.VoxelViewProj, DirectX::XMMatrixTranspose(voxelViewProj));
     mMainPassCB.EyePosW = mScene->getCamerasMap()["MainCam"]->GetPosition3f();
     mMainPassCB.LightPosW = mShadowMap->mShadowMapData.mLightPosW;
     mMainPassCB.RenderTargetSize = XMFLOAT2((float)mClientWidth, (float)mClientHeight);
@@ -235,9 +244,11 @@ void App::Draw(const Timer& gt)
     mCommandList->SetGraphicsRootSignature(mRootSignatures["MainPass"].Get());
     mCommandList->SetGraphicsRootDescriptorTable(d3dUtil::MAIN_PASS_UNIFORM::SHADOWMAP_TEX_TABLE, mShadowMap->Srv());
     mCommandList->SetGraphicsRootDescriptorTable(d3dUtil::MAIN_PASS_UNIFORM::G_BUFFER, mDeferredRenderer->getGBuffer(GBUFFER_TYPE::POSITION)->getGPUHandle4SRV());
+    mCommandList->SetGraphicsRootDescriptorTable(d3dUtil::MAIN_PASS_UNIFORM::VOXEL, mMeshVoxelizer->getGPUHandle4UAV());
 
     DrawScene2GBuffers();
     DrawScene2ShadowMap();
+    VoxelizeMesh();
 
     mCommandList->RSSetViewports(1, &mScreenViewport);
     mCommandList->RSSetScissorRects(1, &mScissorRect);
@@ -417,6 +428,16 @@ void App::BuildDescriptorHeaps()
         rtvOffset++;
     }
 
+    // ================================================
+    // set descriptor heap addresses for voxel
+    // ================================================
+
+    auto meshVoxelizerCPUSrvHandle = mSrvHeaps["MainPass"]->GetCPUHandle(mSrvHeaps["MainPass"]->getCurrentOffsetRef());
+    auto meshVoxelizerGPUSrvHandle = mSrvHeaps["MainPass"]->GetGPUHandle(mSrvHeaps["MainPass"]->getCurrentOffsetRef());
+    mSrvHeaps["MainPass"]->getCurrentOffsetRef()++;
+    auto meshVoxelizerCPUUavHandle = mSrvHeaps["MainPass"]->GetCPUHandle(mSrvHeaps["MainPass"]->getCurrentOffsetRef());
+    auto meshVoxelizerGPUUavHandle = mSrvHeaps["MainPass"]->GetGPUHandle(mSrvHeaps["MainPass"]->getCurrentOffsetRef());
+    mMeshVoxelizer->SetupCPUGPUDescOffsets(meshVoxelizerCPUSrvHandle, meshVoxelizerGPUSrvHandle, meshVoxelizerCPUUavHandle, meshVoxelizerGPUUavHandle);
 }
 
 void App::BuildRootSignature()
@@ -468,12 +489,23 @@ void App::BuildShadersAndInputLayout()
 {
     mShaders["standardVS"] = d3dUtil::CompileShader(L"Shaders/pix.hlsl", nullptr, "VS", "vs_5_1");
     mShaders["opaquePS"] = d3dUtil::CompileShader(L"Shaders/pix.hlsl", nullptr, "PS", "ps_5_1");
+
+    // Shadpw
     mShaders["shadowVS"] = d3dUtil::CompileShader(L"Shaders/shadow.hlsl", nullptr, "VS", "vs_5_1");
     mShaders["shadowOpaquePS"] = d3dUtil::CompileShader(L"Shaders/shadow.hlsl", nullptr, "PS", "ps_5_1");
+
+    // Debug
     mShaders["debugVS"] = d3dUtil::CompileShader(L"Shaders/shadowDebug.hlsl", nullptr, "VS", "vs_5_1");
     mShaders["debugPS"] = d3dUtil::CompileShader(L"Shaders/shadowDebug.hlsl", nullptr, "PS", "ps_5_1");
+
+    // Deferred
     mShaders["deferredVS"] = d3dUtil::CompileShader(L"Shaders/deferred.hlsl", nullptr, "VS", "vs_5_1");
     mShaders["deferredPS"] = d3dUtil::CompileShader(L"Shaders/deferred.hlsl", nullptr, "PS", "ps_5_1");
+
+    // Voxel
+    mShaders["voxelizerVS"] = d3dUtil::CompileShader(L"Shaders/voxelizer.hlsl", nullptr, "VS", "vs_5_1");
+    mShaders["voxelizerGS"] = d3dUtil::CompileShader(L"Shaders/voxelizer.hlsl", nullptr, "GS", "gs_5_1");
+    mShaders["voxelizerPS"] = d3dUtil::CompileShader(L"Shaders/voxelizer.hlsl", nullptr, "PS", "ps_5_1");
 
     mInputLayout =
     {
@@ -591,7 +623,7 @@ void App::BuildPSOs() {
     // PSO for opaque wireframe objects.
     // =====================================
 
-    auto wireFrameRasterDesc = rasterDesc;
+ /*   auto wireFrameRasterDesc = rasterDesc;
     wireFrameRasterDesc.FillMode = D3D12_FILL_MODE_WIREFRAME;
     CreatePSO(
         mPSOs["opaque_wireframe"].GetAddressOf(),
@@ -604,7 +636,7 @@ void App::BuildPSOs() {
         mBackBufferFormat,
         mDepthStencilFormat,
         mShaders["standardVS"].Get(),
-        mShaders["opaquePS"].Get());
+        mShaders["opaquePS"].Get());*/
 
     // =====================================
     // PSO for deferred renderer
@@ -640,11 +672,28 @@ void App::BuildPSOs() {
         mShaders["standardVS"].Get(),
         mShaders["opaquePS"].Get()
     );
+
+    // =====================================
+    // PSO for voxelizer renderer pass
+    // =====================================
+    CreatePSO(mPSOs["voxelizer"].GetAddressOf(),
+        mRootSignatures["MainPass"].Get(),
+        D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
+        CD3DX12_BLEND_DESC(D3D12_DEFAULT),
+        rasterDesc,
+        dsvDesc,
+        0,
+        DXGI_FORMAT_UNKNOWN,
+        DXGI_FORMAT_UNKNOWN,
+        mShaders["voxelizerVS"].Get(),
+        mShaders["voxelizerPS"].Get(),
+        mShaders["voxelizerGS"].Get());
 }
 
 
 
-void App::BuildFrameResources() {
+void App::BuildFrameResources() 
+{
     for (int i = 0; i < d3dUtil::gNumFrameResources; ++i)
     {
         mFrameResources.push_back(std::make_unique<FrameResource>(md3dDevice.Get(),
@@ -655,8 +704,16 @@ void App::BuildFrameResources() {
     }
 }
 
-void App::VoxelizeMesh() {
-   
+void App::VoxelizeMesh() 
+{
+    UINT passCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(PassConstants));
+    mCommandList->RSSetViewports(1, &mMeshVoxelizer->Viewport());
+    mCommandList->RSSetScissorRects(1, &mMeshVoxelizer->ScissorRect());
+    mCommandList->OMSetRenderTargets(0, nullptr, false, nullptr);
+    auto passCB = mCurrFrameResource->PassCB->Resource();
+    mCommandList->SetGraphicsRootConstantBufferView(d3dUtil::MAIN_PASS_UNIFORM::MAINPASS_CBV, passCB->GetGPUVirtualAddress());
+    mCommandList->SetPipelineState(mPSOs["voxelizer"].Get());
+    DrawRenderItems(mCommandList.Get(), mScene->getObjectInfoLayer()[(int)RenderLayer::Default]);
 }
 
 void App::DrawScene2GBuffers() 

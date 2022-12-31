@@ -5,6 +5,8 @@ Texture2D    gPositionMap : register(t2);
 Texture2D    gAlbedoMap : register(t3);
 Texture2D    gNormalMap : register(t4);
 
+RWTexture3D<float4> gVoxelizer : register(u0);
+
 SamplerState gsamPointWrap        : register(s0);
 SamplerState gsamPointClamp       : register(s1);
 SamplerState gsamLinearWrap       : register(s2);

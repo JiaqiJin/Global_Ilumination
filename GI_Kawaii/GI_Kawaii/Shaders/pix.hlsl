@@ -45,7 +45,7 @@ float4 PS(VertexOut pin) : SV_Target
     uint width, height, numMips;
     gShadowMap.GetDimensions(0, width, height, numMips);
     // Texel size
-    float dx = 1.0f / (float)width;
+    float dx = 1.0f / (float)width;s
     const float2 offsets[9] =
     {
         float2(-dx,  -dx), float2(0.0f,  -dx), float2(dx,  -dx),
