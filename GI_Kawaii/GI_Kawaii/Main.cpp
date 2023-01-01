@@ -37,3 +37,5 @@ Initialize
     CD3DX12_ROOT_PARAMETER slotRootParameter[5];
     SetGraphicsRootConstantBufferView(rootParameterIndex); -> [0-4];
 */
+
+// https://zhuanlan.zhihu.com/p/414691569
