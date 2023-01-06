@@ -140,7 +140,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Common\Window.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Application.cpp" />
+    <ClCompile Include="Utility\HighResolutionTimer.cpp" />
+    <ClCompile Include="pch.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Application.h" />
+    <ClInclude Include="Common\Window.h" />
+    <ClInclude Include="Utility\HighResolutionTimer.h" />
+    <ClInclude Include="pch.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
