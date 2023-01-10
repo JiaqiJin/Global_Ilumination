@@ -4,6 +4,7 @@ Texture2D    gShadowMap : register(t1);
 Texture2D    gPositionMap : register(t2);
 Texture2D    gAlbedoMap : register(t3);
 Texture2D    gNormalMap : register(t4);
+Texture2D    gDepthMap : register(t5);
 
 RWTexture3D<float4> gVoxelizer : register(u0);
 
