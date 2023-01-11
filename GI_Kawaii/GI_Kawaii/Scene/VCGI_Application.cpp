@@ -363,34 +363,29 @@ void App::OnKeyboardInput(const Timer& gt)
 // overriding function in core
 void App::CreateRtvAndDsvDescriptorHeaps()
 {
-    D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc;
-    rtvHeapDesc.NumDescriptors = NumRTVs;
-    rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-    rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-    rtvHeapDesc.NodeMask = 0;
-    ThrowIfFailed(md3dDevice->CreateDescriptorHeap(
-        &rtvHeapDesc, IID_PPV_ARGS(mRtvHeap.GetAddressOf())));
+    //// 0 ==== dsv for default swapchain
+    //// 1 ==== dsv for shadow map
 
-    // 0 ==== dsv for default swapchain
-    // 1 ==== dsv for shadow map
+    mRtvHeap = std::make_unique<DX12_DescriptorHeap>();
+    mRtvHeap->CreateDescriptorHeap(md3dDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
+        (UINT)(NumRTVs),
+        false);
 
-    D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc;
-    dsvHeapDesc.NumDescriptors = NumDSVs;
-    dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-    dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-    dsvHeapDesc.NodeMask = 0;
-    ThrowIfFailed(md3dDevice->CreateDescriptorHeap(
-        &dsvHeapDesc, IID_PPV_ARGS(mDsvHeap.GetAddressOf())));
+    mDsvHeap = std::make_unique<DX12_DescriptorHeap>();
+    mDsvHeap->CreateDescriptorHeap(md3dDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV,
+        (UINT)(NumDSVs),
+        false);
 }
 
 // unorderedmap of mesh textures
 // shadowMap texture
 void App::BuildDescriptorHeaps() 
 {
+    NumSRVs = mScene->getTexturesMap().size() + 1 + static_cast<UINT>(GBUFFER_TYPE::COUNT) + 2; // + 1 for shadow map + gbuffer + 2 for mesh voxelizer
     auto mMainPassSrvHeap = std::make_unique<DX12_DescriptorHeap>();
     mMainPassSrvHeap->CreateDescriptorHeap(md3dDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
-        (UINT)(mScene->getTexturesMap().size() + 1 + static_cast<UINT>(GBUFFER_TYPE::COUNT) + 2),
-        true); // + 1 for shadow map + gbuffer + 2 for mesh voxelizer
+        (UINT)(NumSRVs),
+        true);
     mSrvHeaps["MainPass"] = std::move(mMainPassSrvHeap);
 
     UINT offset = 0;
@@ -407,25 +402,23 @@ void App::BuildDescriptorHeaps()
     auto shadowMapCPUSrvHandle = mSrvHeaps["MainPass"]->GetCPUHandle(mSrvHeaps["MainPass"]->getCurrentOffsetRef());
     auto shadowMapGPUSrvHandle = mSrvHeaps["MainPass"]->GetGPUHandle(mSrvHeaps["MainPass"]->getCurrentOffsetRef());
     mSrvHeaps["MainPass"]->getCurrentOffsetRef()++;
-    auto dsvCPUstart = mDsvHeap->GetCPUDescriptorHandleForHeapStart();
-    UINT dsvOffset = 1;
-    auto shadowMapCPUDsvHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(dsvCPUstart, dsvOffset, mDsvDescriptorSize);
+  
+    auto shadowMapCPUDsvHandle = mDsvHeap->GetCPUHandle(mDsvHeap->getCurrentOffsetRef());
     mShadowMap->BuildDescriptors(shadowMapCPUSrvHandle, shadowMapGPUSrvHandle, shadowMapCPUDsvHandle);
 
     // ================================================
     // set descriptor heap addresses for deferredrenderer
     // ================================================
 
-    auto rtvCPUstart = mRtvHeap->GetCPUDescriptorHandleForHeapStart();
-    UINT rtvOffset = SwapChainBufferCount;
+    for (auto& gbuffer : mDeferredRenderer->getGbuffersMap()) 
+    {
+        auto deferredRendererCPURtvHandle = mRtvHeap->GetCPUHandle(mRtvHeap->getCurrentOffsetRef());
+        mRtvHeap->incrementCurrentOffset();
 
-    for (auto& gbuffer : mDeferredRenderer->getGbuffersMap()) {
-        auto deferredRendererCPURtvHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(rtvCPUstart, rtvOffset, mRtvDescriptorSize);
         auto deferredRendererCPUSrvHandle = mSrvHeaps["MainPass"]->GetCPUHandle(mSrvHeaps["MainPass"]->getCurrentOffsetRef());
         auto deferredRendererGPUSrvHandle = mSrvHeaps["MainPass"]->GetGPUHandle(mSrvHeaps["MainPass"]->getCurrentOffsetRef());
         gbuffer.second->SetupCPUGPUDescOffsets(deferredRendererCPUSrvHandle, deferredRendererGPUSrvHandle, deferredRendererCPURtvHandle);
-        mSrvHeaps["MainPass"]->getCurrentOffsetRef()++;
-        rtvOffset++;
+        mSrvHeaps["MainPass"]->incrementCurrentOffset();
     }
 
     // ================================================

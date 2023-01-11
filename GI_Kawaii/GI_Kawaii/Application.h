@@ -92,6 +92,7 @@ private:
 
     UINT NumRTVs;
     UINT NumDSVs;
+    UINT NumSRVs;
 
     //common camera
     XMFLOAT3 mEyePos = { 0.0f, 0.0f, 0.0f };

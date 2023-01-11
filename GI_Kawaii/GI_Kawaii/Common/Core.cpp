@@ -164,12 +164,13 @@ void Core::OnResize()
 
 	mCurrBackBuffer = 0;
 
-	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHeapHandle(mRtvHeap->GetCPUDescriptorHandleForHeapStart());
 	for (UINT i = 0; i < SwapChainBufferCount; i++)
 	{
 		ThrowIfFailed(mSwapChain->GetBuffer(i, IID_PPV_ARGS(&mSwapChainBuffer[i])));
-		md3dDevice->CreateRenderTargetView(mSwapChainBuffer[i].Get(), nullptr, rtvHeapHandle);
-		rtvHeapHandle.Offset(1, mRtvDescriptorSize);
+		md3dDevice->CreateRenderTargetView(mSwapChainBuffer[i].Get(), nullptr, mRtvHeap->GetCPUHandle(i));
+		if (!mInitialized) {
+			mRtvHeap->incrementCurrentOffset();
+		}
 	}
 
 	// Create the depth/stencil buffer and view.
@@ -212,6 +213,9 @@ void Core::OnResize()
 	dsvDesc.Format = mDepthStencilFormat;
 	dsvDesc.Texture2D.MipSlice = 0;
 	md3dDevice->CreateDepthStencilView(mDepthStencilBuffer.Get(), &dsvDesc, DepthStencilView());
+	if (!mInitialized) {
+		mDsvHeap->incrementCurrentOffset();
+	}
 
 	// Transition the resource from its initial state to be used as a depth buffer.
 	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mDepthStencilBuffer.Get(),
@@ -234,6 +238,8 @@ void Core::OnResize()
 	mScreenViewport.MaxDepth = 1.0f;
 
 	mScissorRect = { 0, 0, mClientWidth, mClientHeight };
+
+	mInitialized = true;
 }
 
 LRESULT Core::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -566,20 +572,20 @@ ID3D12Resource* Core::CurrentBackBuffer()const
 
 D3D12_CPU_DESCRIPTOR_HANDLE Core::CurrentBackBufferView() const
 {
-	/*return CD3DX12_CPU_DESCRIPTOR_HANDLE(
+	return CD3DX12_CPU_DESCRIPTOR_HANDLE(
 		mRtvHeap->GetCPUHandle(0),
 		mCurrBackBuffer,
-		mRtvDescriptorSize);*/
-	return CD3DX12_CPU_DESCRIPTOR_HANDLE(
+		mRtvDescriptorSize);
+	/*return CD3DX12_CPU_DESCRIPTOR_HANDLE(
 		mRtvHeap->GetCPUDescriptorHandleForHeapStart(),
 		mCurrBackBuffer,
-		mRtvDescriptorSize);
+		mRtvDescriptorSize);*/
 }
 
 D3D12_CPU_DESCRIPTOR_HANDLE Core::DepthStencilView() const
 {
 	//return mDsvHeap->GetCPUHandle(0);
-	return mDsvHeap->GetCPUDescriptorHandleForHeapStart();
+	return mDsvHeap->GetCPUHandle(0);
 }
 
 void Core::CalculateFrameStats()
