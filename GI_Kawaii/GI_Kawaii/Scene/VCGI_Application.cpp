@@ -103,19 +103,19 @@ void App::UpdateObjectCBs(const Timer& gt) {
     {
         // Only update the cbuffer data if the constants have changed.  
         // This needs to be tracked per frame resource.
-        if (e->NumFramesDirty > 0)
+        if (e.second->NumFramesDirty > 0)
         {
-            XMMATRIX world = DirectX::XMLoadFloat4x4(&e->World);
-            XMMATRIX texTransform = DirectX::XMLoadFloat4x4(&e->texTransform);
+            XMMATRIX world = DirectX::XMLoadFloat4x4(&e.second->World);
+            XMMATRIX texTransform = DirectX::XMLoadFloat4x4(&e.second->texTransform);
 
             ObjectConstants objConstants;
             DirectX::XMStoreFloat4x4(&objConstants.World, DirectX::XMMatrixTranspose(world));
             DirectX::XMStoreFloat4x4(&objConstants.TexTransform, DirectX::XMMatrixTranspose(texTransform));
-            objConstants.Obj2VoxelScale = e->Obj2VoxelScale;
-            currObjectCB->CopyData(e->ObjCBIndex, objConstants);
+            objConstants.Obj2VoxelScale = e.second->Obj2VoxelScale;
+            currObjectCB->CopyData(e.second->ObjCBIndex, objConstants);
 
             // Next FrameResource need to be updated too.
-            e->NumFramesDirty--;
+            e.second->NumFramesDirty--;
         }
     }
 }
@@ -175,6 +175,8 @@ void App::UpdateMainPassCB(const Timer& gt)
     mMainPassCB.FarZ = 1000.0f;
     mMainPassCB.TotalTime = gt.TotalTime();
     mMainPassCB.DeltaTime = gt.DeltaTime();
+    mMainPassCB.camLookDir = mScene->getCamerasMap()["MainCam"]->GetLook3f();
+    mMainPassCB.camUpDir = mScene->getCamerasMap()["MainCam"]->GetUp3f();
 
     auto currPassCB = mCurrFrameResource->PassCB.get();
     currPassCB->CopyData(0, mMainPassCB);
@@ -249,26 +251,8 @@ void App::Draw(const Timer& gt)
     DrawScene2GBuffers();
     DrawScene2ShadowMap();
     VoxelizeMesh();
-
-    mCommandList->RSSetViewports(1, &mScreenViewport);
-    mCommandList->RSSetScissorRects(1, &mScissorRect);
-
-    // Indicate a state transition on the resource usage. 
-    mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
-        D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
-
-    // Clear the back buffer and depth buffer.
-    mCommandList->ClearRenderTargetView(CurrentBackBufferView(), Colors::LightSteelBlue, 0, nullptr);
-    mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, nullptr);
-    auto passCB = mCurrFrameResource->PassCB->Resource();
-    mCommandList->SetGraphicsRootConstantBufferView(d3dUtil::MAIN_PASS_UNIFORM::MAINPASS_CBV, passCB->GetGPUVirtualAddress());
-    mCommandList->SetPipelineState(mPSOs["deferredPost"].Get());
-    DrawRenderItems(mCommandList.Get(), mScene->getObjectInfoLayer()[(int)RenderLayer::Gbuffer]);
-    mCommandList->SetPipelineState(mPSOs["debug"].Get());
-    DrawRenderItems(mCommandList.Get(), mScene->getObjectInfoLayer()[(int)RenderLayer::Debug]);
-    // Indicate a state transition on the resource usage.
-    mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
-        D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+    DrawScene();
+    
 
     // Done recording commands.
     ThrowIfFailed(mCommandList->Close());
@@ -381,7 +365,7 @@ void App::CreateRtvAndDsvDescriptorHeaps()
 // shadowMap texture
 void App::BuildDescriptorHeaps() 
 {
-    NumSRVs = mScene->getTexturesMap().size() + 1 + static_cast<UINT>(GBUFFER_TYPE::COUNT) + 2; // + 1 for shadow map + gbuffer + 2 for mesh voxelizer
+    NumSRVs = mScene->getTexturesMap().size() + 1 + static_cast<UINT>(GBUFFER_TYPE::COUNT) + 2; // + 1 for shadow map + gbuffer + 2 for mesh voxelizer (SRV & UAV)
     auto mMainPassSrvHeap = std::make_unique<DX12_DescriptorHeap>();
     mMainPassSrvHeap->CreateDescriptorHeap(md3dDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
         (UINT)(NumSRVs),
@@ -444,7 +428,7 @@ void App::BuildRootSignature()
     CD3DX12_DESCRIPTOR_RANGE texTableShadow;
     texTableShadow.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
     CD3DX12_DESCRIPTOR_RANGE gbufferTable;
-    gbufferTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (int)GBUFFER_TYPE::COUNT, 2);
+    gbufferTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (int)GBUFFER_TYPE::COUNT, 2); //t2, t3 ,t4, t5
     CD3DX12_DESCRIPTOR_RANGE voxelTexTable;
     voxelTexTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
     // Root parameter can be a table, root descriptor or root constants.
@@ -666,6 +650,8 @@ void App::BuildPSOs() {
         mShaders["opaquePS"].Get()
     );
 
+    auto voxelRasterDesc = rasterDesc;
+    voxelRasterDesc.CullMode = D3D12_CULL_MODE_NONE;
     // =====================================
     // PSO for voxelizer renderer pass
     // =====================================
@@ -673,7 +659,7 @@ void App::BuildPSOs() {
         mRootSignatures["MainPass"].Get(),
         D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
         CD3DX12_BLEND_DESC(D3D12_DEFAULT),
-        rasterDesc,
+        voxelRasterDesc,
         dsvDesc,
         0,
         DXGI_FORMAT_UNKNOWN,
@@ -695,6 +681,29 @@ void App::BuildFrameResources()
             (UINT)mScene->getMaterialMap().size()       // this many material cbvs
             ));
     }
+}
+
+void App::DrawScene()
+{
+    mCommandList->RSSetViewports(1, &mScreenViewport);
+    mCommandList->RSSetScissorRects(1, &mScissorRect);
+
+    // Indicate a state transition on the resource usage. 
+    mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
+        D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+    // Clear the back buffer and depth buffer.
+    mCommandList->ClearRenderTargetView(CurrentBackBufferView(), Colors::LightSteelBlue, 0, nullptr);
+    mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, nullptr);
+    auto passCB = mCurrFrameResource->PassCB->Resource();
+    mCommandList->SetGraphicsRootConstantBufferView(d3dUtil::MAIN_PASS_UNIFORM::MAINPASS_CBV, passCB->GetGPUVirtualAddress());
+    mCommandList->SetPipelineState(mPSOs["deferredPost"].Get());
+    DrawRenderItems(mCommandList.Get(), mScene->getObjectInfoLayer()[(int)RenderLayer::Gbuffer]);
+    mCommandList->SetPipelineState(mPSOs["debug"].Get());
+    DrawRenderItems(mCommandList.Get(), mScene->getObjectInfoLayer()[(int)RenderLayer::Debug]);
+    // Indicate a state transition on the resource usage.
+    mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
+        D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 }
 
 void App::VoxelizeMesh() 

@@ -37,6 +37,7 @@ float4 PS(VertexOut pin) : SV_Target
     // Voxel visualization
     bool visulizevoxel = true;
     float3 voxelPickColor = float3(0.0, 0.0, 0.0);
+
     // ray marched
     if (visulizevoxel)
     {
