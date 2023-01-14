@@ -29,6 +29,10 @@ public:
 		D3D12_GPU_DESCRIPTOR_HANDLE hGPUUav
 	);
 
+	void Clear3DTexture(ID3D12GraphicsCommandList* cmdList,
+		ID3D12RootSignature* rootSig,
+		ID3D12PipelineState* pso);
+
 	void Init3DVoxelTexture();
 	void OnResize(UINT newX, UINT newY, UINT newZ);
 	D3D12_VIEWPORT Viewport()const;

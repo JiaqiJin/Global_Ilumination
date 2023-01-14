@@ -46,6 +46,7 @@ private:
     void UpdateMaterialCBs(const Timer& gt);
     void UpdateCamera(const Timer& gt);
     void UpdateShadowPassCB(const Timer& gt);
+    void UpdateScenePhysics(const Timer& gt);
 
     void BuildRootSignature();
     void BuildDescriptorHeaps();
@@ -107,4 +108,5 @@ private:
     POINT mLastMousePos;
 
     bool mIsWireframe = false;
+    bool mShowVoxel = false;
 };

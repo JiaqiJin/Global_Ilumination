@@ -34,7 +34,7 @@ bool App::Initialize() {
     mDeferredRenderer = std::make_unique<DeferredRenderer>(md3dDevice.Get(), mClientWidth, mClientHeight);
     mDeferredRenderer->InitDeferredRenderer();
 
-    mMeshVoxelizer = std::make_unique<MeshVoxelizer>(md3dDevice.Get(), 256, 256, 256);
+    mMeshVoxelizer = std::make_unique<MeshVoxelizer>(md3dDevice.Get(), 512, 512, 512);
     mMeshVoxelizer->Init3DVoxelTexture();
 
     BuildDescriptorHeaps();
@@ -78,7 +78,7 @@ void App::Update(const Timer& gt) {
     }
 
     UpdateCBs(gt);
-
+    UpdateScenePhysics(gt);
 }
 
 void App::UpdateCamera(const Timer& gt)
@@ -177,6 +177,7 @@ void App::UpdateMainPassCB(const Timer& gt)
     mMainPassCB.DeltaTime = gt.DeltaTime();
     mMainPassCB.camLookDir = mScene->getCamerasMap()["MainCam"]->GetLook3f();
     mMainPassCB.camUpDir = mScene->getCamerasMap()["MainCam"]->GetUp3f();
+    mMainPassCB.showVoxel = mShowVoxel;
 
     auto currPassCB = mCurrFrameResource->PassCB.get();
     currPassCB->CopyData(0, mMainPassCB);
@@ -210,6 +211,13 @@ void App::UpdateShadowPassCB(const Timer& gt) {
     auto currPassCB = mCurrFrameResource->PassCB.get();
     currPassCB->CopyData(1, mShadowPassCB);
 }
+
+void App::UpdateScenePhysics(const Timer& gt)
+{
+    DirectX::XMStoreFloat4x4(&mScene->getObjectInfos()["model1"]->World, DirectX::XMMatrixScaling(10.0f, 10.0f, 10.0f) * DirectX::XMMatrixTranslation(0.0f, 15.0f, 5.0 * std::sin(float(gt.TotalTime()))));
+    mScene->getObjectInfos()["model1"]->NumFramesDirty = d3dUtil::gNumFrameResources;
+}
+
 void App::OnResize() 
 {
     Core::OnResize();
@@ -250,6 +258,7 @@ void App::Draw(const Timer& gt)
 
     DrawScene2GBuffers();
     DrawScene2ShadowMap();
+    mMeshVoxelizer->Clear3DTexture(mCommandList.Get(), mRootSignatures["MainPass"].Get(), mPSOs["opaque"].Get());
     VoxelizeMesh();
     DrawScene();
     
@@ -330,6 +339,16 @@ void App::OnKeyboardInput(const Timer& gt)
         mIsWireframe = true;
     else
         mIsWireframe = false;
+
+    if (GetAsyncKeyState('Q') & 0x8000) 
+    {
+        mShowVoxel = true;
+    }
+    else
+    {
+        mShowVoxel = false;
+    }
+
     if (GetAsyncKeyState('W') & 0x8000)
         mScene->getCamerasMap()["MainCam"]->Walk(speed * dt);
 
@@ -460,6 +479,11 @@ void App::BuildRootSignature()
         serializedRootSig->GetBufferPointer(),
         serializedRootSig->GetBufferSize(),
         IID_PPV_ARGS(mRootSignatures["MainPass"].GetAddressOf())));
+
+    // =================================================
+    // compute reset pass root signature 
+    // =================================================
+
 }
 
 void App::BuildShadersAndInputLayout()
@@ -600,7 +624,7 @@ void App::BuildPSOs() {
     // PSO for opaque wireframe objects.
     // =====================================
 
- /*   auto wireFrameRasterDesc = rasterDesc;
+    auto wireFrameRasterDesc = rasterDesc;
     wireFrameRasterDesc.FillMode = D3D12_FILL_MODE_WIREFRAME;
     CreatePSO(
         mPSOs["opaque_wireframe"].GetAddressOf(),
@@ -613,7 +637,7 @@ void App::BuildPSOs() {
         mBackBufferFormat,
         mDepthStencilFormat,
         mShaders["standardVS"].Get(),
-        mShaders["opaquePS"].Get());*/
+        mShaders["opaquePS"].Get());
 
     // =====================================
     // PSO for deferred renderer
