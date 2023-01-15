@@ -243,10 +243,8 @@ void Scene::processNode(aiNode* ainode, const aiScene* aiscene, Model* assimpMod
     }
 }
 
-void Scene::initScene() {
-
-
-
+void Scene::initScene() 
+{
     cpyCommandObject->FlushCommandQueue();
     cpyCommandObject->ResetCommandList();
 

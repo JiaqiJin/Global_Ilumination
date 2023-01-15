@@ -134,5 +134,8 @@ void MeshVoxelizer::PopulateUniformData()
 
 void MeshVoxelizer::Clear3DTexture(ID3D12GraphicsCommandList* cmdList, ID3D12RootSignature* rootSig, ID3D12PipelineState* pso)
 {
-
+	cmdList->SetPipelineState(pso);
+	cmdList->SetComputeRootSignature(rootSig);
+	cmdList->SetComputeRootDescriptorTable(0, getGPUHandle4UAV());
+	cmdList->Dispatch(mX / 8.0, mY / 8.0, mZ / 8.0);
 }

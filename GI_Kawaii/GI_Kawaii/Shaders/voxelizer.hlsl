@@ -119,3 +119,12 @@ void PS(PS_INPUT pin)
 		gVoxelizer[texIndex] = diffuseAlbedo;
 	}
 }
+
+[numthreads(8, 8, 8)]
+void CompReset(int3 dispatchThreadID : SV_DispatchThreadID)
+{
+	int x = dispatchThreadID.x;
+	int y = dispatchThreadID.y;
+	int z = dispatchThreadID.z;
+	gVoxelizer[int3(x, y, z)] = float4(0.0, 0.0, 0.0, 0.0);
+}
