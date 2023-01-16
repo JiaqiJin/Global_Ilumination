@@ -34,7 +34,7 @@ bool App::Initialize() {
     mDeferredRenderer = std::make_unique<DeferredRenderer>(md3dDevice.Get(), mClientWidth, mClientHeight);
     mDeferredRenderer->InitDeferredRenderer();
 
-    mMeshVoxelizer = std::make_unique<MeshVoxelizer>(md3dDevice.Get(), 512, 512, 512);
+    mMeshVoxelizer = std::make_unique<MeshVoxelizer>(md3dDevice.Get(), 256, 256, 256);
     mMeshVoxelizer->Init3DVoxelTexture();
 
     BuildDescriptorHeaps();
@@ -214,7 +214,8 @@ void App::UpdateShadowPassCB(const Timer& gt) {
 
 void App::UpdateScenePhysics(const Timer& gt)
 {
-    DirectX::XMStoreFloat4x4(&mScene->getObjectInfos()["model1"]->World, DirectX::XMMatrixScaling(10.0f, 10.0f, 10.0f) * DirectX::XMMatrixTranslation(0.0f, 15.0f, 5.0 * std::sin(float(gt.TotalTime()))));
+    DirectX::XMStoreFloat4x4(&mScene->getObjectInfos()["model1"]->World, 
+        DirectX::XMMatrixScaling(10.0f, 10.0f, 10.0f) * DirectX::XMMatrixTranslation(10.0f * std::sin(float(gt.TotalTime())), 15.0f, 0.0));
     mScene->getObjectInfos()["model1"]->NumFramesDirty = d3dUtil::gNumFrameResources;
 }
 

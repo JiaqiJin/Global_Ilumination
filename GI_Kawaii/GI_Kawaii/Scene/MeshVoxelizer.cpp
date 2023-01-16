@@ -74,7 +74,7 @@ void MeshVoxelizer::BuildDescriptors()
 {
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	srvDesc.Format = mFormat;
+	srvDesc.Format = mSRVFormat;
 	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
 	srvDesc.Texture3D.MostDetailedMip = 0;
 	srvDesc.Texture3D.MipLevels = 1;
@@ -82,7 +82,7 @@ void MeshVoxelizer::BuildDescriptors()
 	device->CreateShaderResourceView(m3DTexture.Get(), &srvDesc, mhCPUsrv);
 
 	D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
-	uavDesc.Format = mFormat;
+	uavDesc.Format = mUAVFormat;
 	uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE3D;
 	uavDesc.Texture3D.MipSlice = 0;
 	uavDesc.Texture3D.FirstWSlice = 0;

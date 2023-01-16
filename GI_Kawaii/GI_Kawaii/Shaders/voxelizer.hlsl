@@ -22,6 +22,34 @@ struct PS_INPUT
     float2 TexC : TEXCOORD;
 };
 
+// https://github.com/LeifNode/Novus-Engine 
+void imageAtomicRGBA8Avg(RWTexture3D<uint> imgUI, uint3 coords, float4 val)
+{
+	val.rgb *= 255.0f; // Optimize following calculations
+	uint newVal = convVec4ToRGBA8(val);
+	uint prevStoredVal = 0;
+	uint curStoredVal = 0;
+
+	// Loop as long as destination value gets changed by other threads
+
+	[allow_uav_condition] do //While loop does not work and crashes the graphics driver, but do while loop that does the same works; compiler error?
+	{
+		InterlockedCompareExchange(imgUI[coords], prevStoredVal, newVal, curStoredVal);
+
+		if (curStoredVal == prevStoredVal)
+			break;
+
+		prevStoredVal = curStoredVal;
+		float4 rval = convRGBA8ToVec4(curStoredVal);
+		rval.xyz = (rval.xyz * rval.w); // Denormalize
+		float4 curValF = rval + val; // Add new value
+		curValF.xyz /= (curValF.w); // Renormalize
+		newVal = convVec4ToRGBA8(curValF);
+
+
+	} while (true);
+}
+
 GS_INPUT VS(VertexIn vin)
 {
     GS_INPUT gin;
@@ -112,11 +140,12 @@ void PS(PS_INPUT pin)
 		((pin.PosW.y * 0.5) + 0.5f) * texDimensions.y,
 		((pin.PosW.z * 0.5) + 0.5f) * texDimensions.z);
 
-	diffuseAlbedo.xyz += float3(0.1, 0.1, 0.1);
+	//diffuseAlbedo.xyz += float3(0.1, 0.1, 0.1);
 
 	if (all(texIndex < texDimensions.xyz) && all(texIndex >= 0))
 	{
-		gVoxelizer[texIndex] = diffuseAlbedo;
+		//gVoxelizer[texIndex] = diffuseAlbedo;
+		imageAtomicRGBA8Avg(gVoxelizer, texIndex, diffuseAlbedo);
 	}
 }
 
@@ -126,5 +155,5 @@ void CompReset(int3 dispatchThreadID : SV_DispatchThreadID)
 	int x = dispatchThreadID.x;
 	int y = dispatchThreadID.y;
 	int z = dispatchThreadID.z;
-	gVoxelizer[int3(x, y, z)] = float4(0.0, 0.0, 0.0, 0.0);
+	gVoxelizer[int3(x, y, z)] = 0;
 }
