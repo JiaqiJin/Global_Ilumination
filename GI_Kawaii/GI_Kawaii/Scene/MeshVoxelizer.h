@@ -62,52 +62,33 @@ public:
 	MeshVoxelizer& operator=(const MeshVoxelizer& rhs) = delete;
 	~MeshVoxelizer() = default;
 
-	ID3D12Resource* getResourcePtr();
-	D3D12_CPU_DESCRIPTOR_HANDLE getCPUHandle4SRV() const;
-	D3D12_GPU_DESCRIPTOR_HANDLE getGPUHandle4SRV() const;
-	D3D12_CPU_DESCRIPTOR_HANDLE getCPUHandle4UAV() const;
-	D3D12_GPU_DESCRIPTOR_HANDLE getGPUHandle4UAV() const;
 	VolumeTexture* getVolumeTexture(VOLUME_TEXTURE_TYPE _type);
 	std::unordered_map<VOLUME_TEXTURE_TYPE, std::unique_ptr<VolumeTexture>>& getVoxelTexturesMap();
-
-	void SetupCPUGPUDescOffsets(
-		D3D12_CPU_DESCRIPTOR_HANDLE hCPUSrv,
-		D3D12_GPU_DESCRIPTOR_HANDLE hGPUSrv,
-		D3D12_CPU_DESCRIPTOR_HANDLE hCPUUav,
-		D3D12_GPU_DESCRIPTOR_HANDLE hGPUUav);
 
 	void Clear3DTexture(ID3D12GraphicsCommandList* cmdList,
 		ID3D12RootSignature* rootSig,
 		ID3D12PipelineState* pso);
 
-	void Init3DVoxelTexture();
+	void InitVoxelizer();
 	void OnResize(UINT newX, UINT newY, UINT newZ);
 	D3D12_VIEWPORT Viewport()const;
 	D3D12_RECT ScissorRect()const;
+
 	MeshVoxelizerData& getUniformData();
+	UINT getNumDescriptors();
 
 private:
 
-	void BuildDescriptors();
-	void BuildResources();
 	void PopulateUniformData();
 
 private:
 	ID3D12Device* device;
 	UINT mX, mY, mZ;
+	UINT mNumDescriptors;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> m3DTexture;
 
 	std::unordered_map<VOLUME_TEXTURE_TYPE, std::unique_ptr<VolumeTexture>> mVolumeTextures;
-
-	D3D12_CPU_DESCRIPTOR_HANDLE mhCPUsrv;
-	D3D12_GPU_DESCRIPTOR_HANDLE mhGPUsrv;
-	D3D12_CPU_DESCRIPTOR_HANDLE mhCPUuav;
-	D3D12_GPU_DESCRIPTOR_HANDLE mhGPUuav;
-
-	DXGI_FORMAT mFormat = DXGI_FORMAT_R8G8B8A8_TYPELESS;
-	DXGI_FORMAT mSRVFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
-	DXGI_FORMAT mUAVFormat = DXGI_FORMAT_R32_UINT;
 
 	D3D12_VIEWPORT mViewPort;
 	D3D12_RECT mScissorRect;

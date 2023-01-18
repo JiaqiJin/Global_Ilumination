@@ -35,7 +35,7 @@ bool App::Initialize() {
     mDeferredRenderer->InitDeferredRenderer();
 
     mMeshVoxelizer = std::make_unique<MeshVoxelizer>(md3dDevice.Get(), 256, 256, 256);
-    mMeshVoxelizer->Init3DVoxelTexture();
+    mMeshVoxelizer->InitVoxelizer();
 
     BuildDescriptorHeaps();
     BuildRootSignature();
@@ -255,7 +255,7 @@ void App::Draw(const Timer& gt)
     mCommandList->SetGraphicsRootSignature(mRootSignatures["MainPass"].Get());
     mCommandList->SetGraphicsRootDescriptorTable(d3dUtil::MAIN_PASS_UNIFORM::SHADOWMAP_TEX_TABLE, mShadowMap->Srv());
     mCommandList->SetGraphicsRootDescriptorTable(d3dUtil::MAIN_PASS_UNIFORM::G_BUFFER, mDeferredRenderer->getGBuffer(GBUFFER_TYPE::POSITION)->getGPUHandle4SRV());
-    mCommandList->SetGraphicsRootDescriptorTable(d3dUtil::MAIN_PASS_UNIFORM::VOXEL, mMeshVoxelizer->getGPUHandle4UAV());
+    mCommandList->SetGraphicsRootDescriptorTable(d3dUtil::MAIN_PASS_UNIFORM::VOXEL, mMeshVoxelizer->getVolumeTexture(VOLUME_TEXTURE_TYPE::ALBEDO)->getGPUHandle4UAV());
 
     DrawScene2GBuffers();
     DrawScene2ShadowMap();
@@ -385,7 +385,9 @@ void App::CreateRtvAndDsvDescriptorHeaps()
 // shadowMap texture
 void App::BuildDescriptorHeaps() 
 {
-    NumSRVs = mScene->getTexturesMap().size() + 1 + static_cast<UINT>(GBUFFER_TYPE::COUNT) + 2; // + 1 for shadow map + gbuffer + 2 for mesh voxelizer (SRV & UAV)
+    // + 1 for shadow map + gbuffer + for mesh voxelizer (SRV & UAV)
+    NumSRVs = mScene->getTexturesMap().size() + 1 + static_cast<UINT>(GBUFFER_TYPE::COUNT) + mMeshVoxelizer->getNumDescriptors(); 
+
     auto mMainPassSrvHeap = std::make_unique<DX12_DescriptorHeap>();
     mMainPassSrvHeap->CreateDescriptorHeap(md3dDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
         (UINT)(NumSRVs),
@@ -429,12 +431,18 @@ void App::BuildDescriptorHeaps()
     // set descriptor heap addresses for voxel
     // ================================================
 
-    auto meshVoxelizerCPUSrvHandle = mSrvHeaps["MainPass"]->GetCPUHandle(mSrvHeaps["MainPass"]->getCurrentOffsetRef());
-    auto meshVoxelizerGPUSrvHandle = mSrvHeaps["MainPass"]->GetGPUHandle(mSrvHeaps["MainPass"]->getCurrentOffsetRef());
-    mSrvHeaps["MainPass"]->getCurrentOffsetRef()++;
-    auto meshVoxelizerCPUUavHandle = mSrvHeaps["MainPass"]->GetCPUHandle(mSrvHeaps["MainPass"]->getCurrentOffsetRef());
-    auto meshVoxelizerGPUUavHandle = mSrvHeaps["MainPass"]->GetGPUHandle(mSrvHeaps["MainPass"]->getCurrentOffsetRef());
-    mMeshVoxelizer->SetupCPUGPUDescOffsets(meshVoxelizerCPUSrvHandle, meshVoxelizerGPUSrvHandle, meshVoxelizerCPUUavHandle, meshVoxelizerGPUUavHandle);
+    for (auto& voxTex : mMeshVoxelizer->getVoxelTexturesMap())
+    {
+        auto meshVoxelizerCPUUavHandle = mSrvHeaps["MainPass"]->GetCPUHandle(mSrvHeaps["MainPass"]->getCurrentOffsetRef());
+        auto meshVoxelizerGPUUavHandle = mSrvHeaps["MainPass"]->GetGPUHandle(mSrvHeaps["MainPass"]->getCurrentOffsetRef());
+        mSrvHeaps["MainPass"]->incrementCurrentOffset();
+    }
+    for (auto& voxelTex : mMeshVoxelizer->getVoxelTexturesMap()) {
+        auto meshVoxelizerCPUUavHandle = mSrvHeaps["MainPass"]->GetCPUHandle(mSrvHeaps["MainPass"]->getCurrentOffsetRef());
+        auto meshVoxelizerGPUUavHandle = mSrvHeaps["MainPass"]->GetGPUHandle(mSrvHeaps["MainPass"]->getCurrentOffsetRef());
+        mSrvHeaps["MainPass"]->incrementCurrentOffset();
+        voxelTex.second->SetupSRVCPUGPUDescOffsets(meshVoxelizerCPUUavHandle, meshVoxelizerGPUUavHandle);
+    }
 }
 
 void App::BuildRootSignature()
@@ -450,7 +458,7 @@ void App::BuildRootSignature()
     CD3DX12_DESCRIPTOR_RANGE gbufferTable;
     gbufferTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (int)GBUFFER_TYPE::COUNT, 2); //t2, t3 ,t4, t5
     CD3DX12_DESCRIPTOR_RANGE voxelTexTable;
-    voxelTexTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
+    voxelTexTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, (int)VOLUME_TEXTURE_TYPE::COUNT, 0);
     // Root parameter can be a table, root descriptor or root constants.
     CD3DX12_ROOT_PARAMETER slotRootParameter[d3dUtil::MAIN_PASS_UNIFORM::COUNT];
     // Perfomance TIP: Order from most frequent to least frequent.
@@ -486,7 +494,7 @@ void App::BuildRootSignature()
     // =================================================
     
     CD3DX12_DESCRIPTOR_RANGE voxelTexTableComp;
-    voxelTexTableComp.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
+    voxelTexTableComp.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, (int)VOLUME_TEXTURE_TYPE::COUNT, 0);
 
     CD3DX12_ROOT_PARAMETER slotRootParameterComp[1];
     slotRootParameterComp[0].InitAsDescriptorTable(1, &voxelTexTableComp, D3D12_SHADER_VISIBILITY_ALL);
