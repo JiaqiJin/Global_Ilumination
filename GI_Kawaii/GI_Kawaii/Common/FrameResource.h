@@ -37,6 +37,16 @@ struct PassConstants
     int showVoxel = 1;
 };
 
+struct RadianceConstants
+{
+    DirectX::XMFLOAT3 gLightDir;
+    float pad0;
+    DirectX::XMFLOAT3 gLightCol;
+    float pad1;
+    DirectX::XMFLOAT4X4 gLight2World;
+    float voxelScale;
+};
+
 // GPU material mapper
 struct MaterialConstants {
     DirectX::XMFLOAT4 DiffuseAlbedo = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -50,7 +60,7 @@ class FrameResource
 {
 public:
 
-    FrameResource(ID3D12Device* device, UINT passCount, UINT objectCount, UINT materialCount);
+    FrameResource(ID3D12Device* device, UINT passCount, UINT objectCount, UINT materialCount, UINT radianceCount);
     FrameResource(const FrameResource& rhs) = delete;
     FrameResource& operator=(const FrameResource& rhs) = delete;
     ~FrameResource();
@@ -68,6 +78,7 @@ public:
     std::unique_ptr<UploadBuffer<PassConstants>> PassCB = nullptr;
     std::unique_ptr<UploadBuffer<ObjectConstants>> ObjectCB = nullptr;
     std::unique_ptr<UploadBuffer<MaterialConstants>> MaterialCB = nullptr;
+    std::unique_ptr<UploadBuffer<RadianceConstants>> RadianceCB = nullptr;
 
     // Fence value to mark commands up to this fence point.  This lets us
     // check if these frame resources are still in use by the GPU.

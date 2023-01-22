@@ -140,6 +140,26 @@ void App::UpdateMaterialCBs(const Timer& gt) {
     }
 }
 
+void App::UpdateRadiancePassCB(const Timer& gt) {
+    RadianceConstants mRadianceCB;
+
+    XMMATRIX view = DirectX::XMLoadFloat4x4(&mShadowMap->mShadowMapData.mLightView);
+    XMMATRIX proj = DirectX::XMLoadFloat4x4(&mShadowMap->mShadowMapData.mLightProj);
+
+    XMMATRIX viewProj = DirectX::XMMatrixMultiply(view, proj);
+    XMMATRIX invView = DirectX::XMMatrixInverse(&DirectX::XMMatrixDeterminant(view), view);
+    XMMATRIX invProj = DirectX::XMMatrixInverse(&DirectX::XMMatrixDeterminant(proj), proj);
+    XMMATRIX invViewProj = DirectX::XMMatrixInverse(&DirectX::XMMatrixDeterminant(viewProj), viewProj);
+
+    mRadianceCB.gLightDir = mShadowMap->mShadowMapData.mRotatedLightDirections[0];
+    mRadianceCB.gLightCol = XMFLOAT3(1.0, 1.0, 1.0);
+    mRadianceCB.voxelScale = 200.0f;
+    DirectX::XMStoreFloat4x4(&mRadianceCB.gLight2World, DirectX::XMMatrixTranspose(invViewProj));
+
+    auto curRadianceCB = mCurrFrameResource->RadianceCB.get();
+    curRadianceCB->CopyData(0, mRadianceCB);
+}
+
 void App::UpdateMainPassCB(const Timer& gt)
 {
     PassConstants mMainPassCB; // 0 in main pass CB
@@ -235,7 +255,6 @@ void App::OnResize()
 }
 
 
-
 void App::Draw(const Timer& gt) 
 {
     auto cmdListAlloc = mCurrFrameResource->CmdListAlloc;
@@ -254,7 +273,7 @@ void App::Draw(const Timer& gt)
     mCommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
     mCommandList->SetGraphicsRootSignature(mRootSignatures["MainPass"].Get());
     mCommandList->SetGraphicsRootDescriptorTable(d3dUtil::MAIN_PASS_UNIFORM::SHADOWMAP_TEX_TABLE, mShadowMap->Srv());
-    mCommandList->SetGraphicsRootDescriptorTable(d3dUtil::MAIN_PASS_UNIFORM::G_BUFFER, mDeferredRenderer->getGBuffer(GBUFFER_TYPE::POSITION)->getGPUHandle4SRV());
+    mCommandList->SetGraphicsRootDescriptorTable(d3dUtil::MAIN_PASS_UNIFORM::G_BUFFER, mDeferredRenderer->getGBuffer(GBUFFER_TYPE::POSITION)->getGPUHandle4SRV());// starting GPU handle location for all gbuffers
     mCommandList->SetGraphicsRootDescriptorTable(d3dUtil::MAIN_PASS_UNIFORM::VOXEL, mMeshVoxelizer->getVolumeTexture(VOLUME_TEXTURE_TYPE::ALBEDO)->getGPUHandle4UAV());
 
     DrawScene2GBuffers();
@@ -431,11 +450,12 @@ void App::BuildDescriptorHeaps()
     // set descriptor heap addresses for voxel
     // ================================================
 
-    for (auto& voxTex : mMeshVoxelizer->getVoxelTexturesMap())
+    for (auto& voxelTex : mMeshVoxelizer->getVoxelTexturesMap())
     {
         auto meshVoxelizerCPUUavHandle = mSrvHeaps["MainPass"]->GetCPUHandle(mSrvHeaps["MainPass"]->getCurrentOffsetRef());
         auto meshVoxelizerGPUUavHandle = mSrvHeaps["MainPass"]->GetGPUHandle(mSrvHeaps["MainPass"]->getCurrentOffsetRef());
         mSrvHeaps["MainPass"]->incrementCurrentOffset();
+        voxelTex.second->SetupUAVCPUGPUDescOffsets(meshVoxelizerCPUUavHandle, meshVoxelizerGPUUavHandle);
     }
     for (auto& voxelTex : mMeshVoxelizer->getVoxelTexturesMap()) {
         auto meshVoxelizerCPUUavHandle = mSrvHeaps["MainPass"]->GetCPUHandle(mSrvHeaps["MainPass"]->getCurrentOffsetRef());
@@ -516,6 +536,37 @@ void App::BuildRootSignature()
         serializedRootSigComp->GetBufferPointer(),
         serializedRootSigComp->GetBufferSize(),
         IID_PPV_ARGS(mRootSignatures["CompResetPass"].GetAddressOf())));
+
+    // =================================================
+    // compute Radiance injection pass root signature 
+    // =================================================
+
+    CD3DX12_DESCRIPTOR_RANGE radianceComp;
+    radianceComp.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, (int)VOLUME_TEXTURE_TYPE::COUNT, 0); // U0
+    CD3DX12_DESCRIPTOR_RANGE texTableShadowRadiance;
+    texTableShadowRadiance.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0); //t1
+
+    CD3DX12_ROOT_PARAMETER slotRootParameterCompRadiance[2];
+    slotRootParameterCompRadiance[0].InitAsDescriptorTable(1, &voxelTexTableComp, D3D12_SHADER_VISIBILITY_ALL);
+    slotRootParameterCompRadiance[1].InitAsDescriptorTable(1, &texTableShadowRadiance, D3D12_SHADER_VISIBILITY_ALL);
+
+    CD3DX12_ROOT_SIGNATURE_DESC rootSigDescCompRadiance(2, slotRootParameterCompRadiance, (UINT)staticSamplers.size(), staticSamplers.data(),
+        D3D12_ROOT_SIGNATURE_FLAG_NONE);
+    ComPtr<ID3DBlob> serializedRootSigCompRadiance = nullptr;
+    ComPtr<ID3DBlob> errorBlobCompRadiance = nullptr;
+    hr = D3D12SerializeRootSignature(&rootSigDescCompRadiance, D3D_ROOT_SIGNATURE_VERSION_1,
+        serializedRootSigCompRadiance.GetAddressOf(), errorBlobCompRadiance.GetAddressOf());
+    if (errorBlobCompRadiance != nullptr)
+    {
+        ::OutputDebugStringA((char*)errorBlobCompRadiance->GetBufferPointer());
+    }
+    ThrowIfFailed(hr);
+
+    ThrowIfFailed(md3dDevice->CreateRootSignature(
+        0,
+        serializedRootSigCompRadiance->GetBufferPointer(),
+        serializedRootSigCompRadiance->GetBufferSize(),
+        IID_PPV_ARGS(mRootSignatures["CompRadiance"].GetAddressOf())));
 }
 
 void App::BuildShadersAndInputLayout()
@@ -750,7 +801,8 @@ void App::BuildFrameResources()
         mFrameResources.push_back(std::make_unique<FrameResource>(md3dDevice.Get(),
             2,                                          // two main pass cbvs : default main pass & shadowmap main pass
             (UINT)mScene->getObjectInfos().size(),      // this many objects cbvs
-            (UINT)mScene->getMaterialMap().size()       // this many material cbvs
+            (UINT)mScene->getMaterialMap().size(),      // this many material cbvs
+            1                                           // this many radiance cbvs
             ));
     }
 }
@@ -795,12 +847,14 @@ void App::DrawScene2GBuffers()
     UINT passCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(PassConstants));
     mCommandList->RSSetViewports(1, &mDeferredRenderer->Viewport());
     mCommandList->RSSetScissorRects(1, &mDeferredRenderer->ScissorRect());
+
     D3D12_CPU_DESCRIPTOR_HANDLE CPUhandleArray[(int)GBUFFER_TYPE::COUNT];
 
-    for (auto& gbuffer : mDeferredRenderer->getGbuffersMap())
+    for (auto& gbuffer : mDeferredRenderer->getGbuffersMap()) 
     {
         mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(gbuffer.second->getResourcePtr(),
             D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
         float clearValue[] = { 0.0f, 0.0f, 0.0f, 1.0f };
         mCommandList->ClearRenderTargetView(gbuffer.second->getCPUHandle4RTV(), clearValue, 0, nullptr);
         CPUhandleArray[(int)gbuffer.second->getType()] = gbuffer.second->getCPUHandle4RTV();
@@ -808,12 +862,14 @@ void App::DrawScene2GBuffers()
 
     mCommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
     mCommandList->OMSetRenderTargets(static_cast<UINT>(GBUFFER_TYPE::COUNT), &CPUhandleArray[0], false, &DepthStencilView());
+
     auto passCB = mCurrFrameResource->PassCB->Resource();
     mCommandList->SetGraphicsRootConstantBufferView(d3dUtil::MAIN_PASS_UNIFORM::MAINPASS_CBV, passCB->GetGPUVirtualAddress());
     mCommandList->SetPipelineState(mPSOs["deferred"].Get());
+
     DrawRenderItems(mCommandList.Get(), mScene->getObjectInfoLayer()[(int)RenderLayer::Default]);
 
-    for (auto& gbuffer : mDeferredRenderer->getGbuffersMap())
+    for (auto& gbuffer : mDeferredRenderer->getGbuffersMap()) 
     {
         mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(gbuffer.second->getResourcePtr(),
             D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));

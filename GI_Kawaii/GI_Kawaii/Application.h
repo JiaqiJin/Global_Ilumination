@@ -44,6 +44,7 @@ private:
     void UpdateObjectCBs(const Timer& gt);
     void UpdateMainPassCB(const Timer& gt);
     void UpdateMaterialCBs(const Timer& gt);
+    void UpdateRadiancePassCB(const Timer& gt);
     void UpdateCamera(const Timer& gt);
     void UpdateShadowPassCB(const Timer& gt);
     void UpdateScenePhysics(const Timer& gt);

@@ -134,7 +134,7 @@ void PS(PS_INPUT pin)
 	float4 diffuseAlbedo = gDiffuseMap.Sample(gsamAnisotropicWrap, pin.TexC);
 
 	int3 texDimensions;
-	gVoxelizer.GetDimensions(texDimensions.x, texDimensions.y, texDimensions.z);
+	gVoxelizerAlbedo.GetDimensions(texDimensions.x, texDimensions.y, texDimensions.z);
 
 	uint3 texIndex = uint3(((pin.PosW.x * 0.5) + 0.5f) * texDimensions.x,
 		((pin.PosW.y * 0.5) + 0.5f) * texDimensions.y,
@@ -145,7 +145,8 @@ void PS(PS_INPUT pin)
 	if (all(texIndex < texDimensions.xyz) && all(texIndex >= 0))
 	{
 		//gVoxelizer[texIndex] = diffuseAlbedo;
-		imageAtomicRGBA8Avg(gVoxelizer, texIndex, diffuseAlbedo);
+		gVoxelizerAlbedo[texIndex] = convVec4ToRGBA8(float4(diffuseAlbedo.xyz, 1.0) * 255.0f);
+		gVoxelizerNormal[texIndex] = convVec4ToRGBA8(float4((pin.Normal.xyz + float3(0.5, 0.5, 0.5)) / 2.0, 1.0) * 255.0f);
 	}
 }
 
@@ -155,5 +156,8 @@ void CompReset(int3 dispatchThreadID : SV_DispatchThreadID)
 	int x = dispatchThreadID.x;
 	int y = dispatchThreadID.y;
 	int z = dispatchThreadID.z;
-	gVoxelizer[int3(x, y, z)] = 0;
+	gVoxelizerAlbedo[int3(x, y, z)] = 0;
+	gVoxelizerNormal[int3(x, y, z)] = 0;
+	gVoxelizerEmissive[int3(x, y, z)] = 0;
+	gVoxelizerRadiance[int3(x, y, z)] = 0;
 }

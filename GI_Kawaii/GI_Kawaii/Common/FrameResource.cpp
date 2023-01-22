@@ -1,7 +1,7 @@
 #include "../pch.h"
 #include "FrameResource.h"
 
-FrameResource::FrameResource(ID3D12Device* device, UINT passCount, UINT objectCount, UINT materialCount)
+FrameResource::FrameResource(ID3D12Device* device, UINT passCount, UINT objectCount, UINT materialCount, UINT radianceCount)
 {
     objCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
     matCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(MaterialConstants));
@@ -13,6 +13,7 @@ FrameResource::FrameResource(ID3D12Device* device, UINT passCount, UINT objectCo
     PassCB = std::make_unique<UploadBuffer<PassConstants>>(device, passCount, true);
     ObjectCB = std::make_unique<UploadBuffer<ObjectConstants>>(device, objectCount, true);
     MaterialCB = std::make_unique<UploadBuffer<MaterialConstants>>(device, materialCount, true);
+    RadianceCB = std::make_unique<UploadBuffer<RadianceConstants>>(device, radianceCount, true);
 }
 
 FrameResource::~FrameResource()
