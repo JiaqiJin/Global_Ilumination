@@ -365,11 +365,15 @@ void App::OnKeyboardInput(const Timer& gt)
 
     if (GetAsyncKeyState('Q') & 0x8000) 
     {
-        mShowVoxel = true;
+        mShowVoxel = 1;
+    }
+    else if (GetAsyncKeyState('R') & 0x8000)
+    {
+        mShowVoxel = 2;
     }
     else
     {
-        mShowVoxel = false;
+        mShowVoxel = 0;
     }
 
     if (GetAsyncKeyState('W') & 0x8000)

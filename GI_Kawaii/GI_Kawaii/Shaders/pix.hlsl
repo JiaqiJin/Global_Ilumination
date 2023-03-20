@@ -35,7 +35,7 @@ float4 PS(VertexOut pin) : SV_Target
     float4 Nor = gNormalMap.Sample(gsamLinearWrap, pin.Texc);
 
     // Voxel visualization
-    bool visulizevoxel = showVoxel;
+    int visulizevoxel = showVoxel;
     float3 voxelPickColor = float3(0.0, 0.0, 0.0);
     float3 voxelNormal = float3(0.0, 0.0, 0.0);
 
@@ -54,16 +54,33 @@ float4 PS(VertexOut pin) : SV_Target
             uint3 texIndex = uint3(((mappedloc.x * 0.5) + 0.5f) * texDimensions.x,
                 ((mappedloc.y * 0.5) + 0.5f) * texDimensions.y,
                 ((mappedloc.z * 0.5) + 0.5f) * texDimensions.z);
-            if (gVoxelizerAlbedo[texIndex] == 0)
+            if (visulizevoxel == 2)
             {
-                curloc = curloc + raydr * step;
+                if (gVoxelizerRadiance[texIndex] == 0)
+                {
+                    curloc = curloc + raydr * step;
+                }
+                else
+                {
+                    voxelPickColor = convRGBA8ToVec4(gVoxelizerAlbedo[texIndex]).xyz / 255.0;
+                    voxelNormal = convRGBA8ToVec4(gVoxelizerRadiance[texIndex]).xyz / 255.0;
+                    step = -0.1 * step;
+                    curloc = curloc + raydr * step;
+                }
             }
-            else {
-                voxelPickColor = convRGBA8ToVec4(gVoxelizerAlbedo[texIndex]).xyz / 255.0;
-                voxelNormal = convRGBA8ToVec4(gVoxelizerNormal[texIndex]).xyz / 255.0;
-                step = -0.1 * step;
-                curloc = curloc + raydr * step;
+            else
+            {
+                if (gVoxelizerAlbedo[texIndex] == 0)
+                {
+                    curloc = curloc + raydr * step;
+                }
+                else {
+                    voxelPickColor = convRGBA8ToVec4(gVoxelizerAlbedo[texIndex]).xyz / 255.0;
+                    voxelNormal = convRGBA8ToVec4(gVoxelizerNormal[texIndex]).xyz / 255.0;
+                    step = -0.1 * step;
+                    curloc = curloc + raydr * step;
 
+                }
             }
         }
     }
@@ -99,7 +116,11 @@ float4 PS(VertexOut pin) : SV_Target
 
     float4 col = float4(gAlbedoMap.Sample(gsamLinearWrap, pin.Texc).rgb, 1.0f);
     col = col * lamb * percentLit;
-    if (visulizevoxel)
+    if (visulizevoxel == 1)
+    {
+        col = float4(voxelPickColor, 1.0f);
+    }
+    else if (visulizevoxel == 2)
     {
         col = float4(voxelNormal, 1.0f);
     }

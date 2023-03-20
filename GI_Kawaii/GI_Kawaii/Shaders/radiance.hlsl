@@ -14,10 +14,17 @@ RWTexture3D<uint> gVoxelizerNormal : register(u1);
 RWTexture3D<uint> gVoxelizerEmissive : register(u2);
 RWTexture3D<uint> gVoxelizerRadiance : register(u3);
 
-Texture2D    gShadowMap : register(t0);
+Texture2D gShadowMap : register(t0);
 
 [numthreads(16, 16, 1)]
 void Radiance(uint3 DTid : SV_DispatchThreadID)
 {
+    int shadowTexDimensions;
+    gShadowMap.GetDimensions(shadowTexDimensions.x, shadowTexDimensions.y);
 
+    int voTexDimensions;
+    gVoxelizerAlbedo.GetDimensions(volTexDimensions.x, volTexDimensions.y, volTexDimensions.z);
+
+    if (DTid.x >= (uint)shadowTexDimensions.x || DTid.y >= (uint)shadowTexDimensions.y)
+        return;
 }
