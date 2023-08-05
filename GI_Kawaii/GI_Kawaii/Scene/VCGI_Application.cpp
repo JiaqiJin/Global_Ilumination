@@ -623,9 +623,8 @@ void App::CreatePSO(
     DXGI_FORMAT depthStencilFormat,
     ID3DBlob* vertexShader,
     ID3DBlob* pixelShader,
-    ID3DBlob* geometryShader
-) {
-
+    ID3DBlob* geometryShader)
+{
     D3D12_GRAPHICS_PIPELINE_STATE_DESC PsoDesc;
     ZeroMemory(&PsoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
     PsoDesc.InputLayout = { mInputLayout.data(), (UINT)mInputLayout.size() };

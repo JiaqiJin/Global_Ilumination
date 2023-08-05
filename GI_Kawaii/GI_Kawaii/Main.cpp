@@ -39,3 +39,5 @@ Initialize
 */
 
 // https://zhuanlan.zhihu.com/p/414691569
+// https://jose-villegas.github.io/post/deferred_voxel_shading/
+// https://xeolabs.com/pdfs/OpenGLInsights.pdf
